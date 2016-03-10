@@ -12,6 +12,9 @@ clips   = data['clips']
 #(Motion, Styles)
 classes = data['classes']
 
+clips = np.swapaxes(clips, 1, 2)
+clips = clips[:,:-4]
+
 nb_datapoints = classes.shape[0]
 nb_attributes = clips.shape[1] * clips.shape[2]
 

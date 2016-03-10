@@ -13,11 +13,27 @@ from sklearn.svm import LinearSVC
 data = np.load('data_styletransfer.npz')
 
 #(Examples, Time frames, joints)
-X  = data['clips']
+clips = data['clips']
+
+clips = np.swapaxes(clips, 1, 2)
+X = clips[:,:-4]
+
 #(Motion, Styles)
 classes = data['classes']
 
-# import some data to play with
+
+# get mean and std
+preprocessed = np.load('styletransfer_preprocessed.npz')
+Xmean = preprocessed['Xmean']
+Xmean = Xmean.reshape(1,len(Xmean),1)
+Xstd  = preprocessed['Xstd']
+Xstd = Xstd.reshape(1,len(Xstd),1)
+
+Xstd[np.where(Xstd == 0)] = 1
+
+X = (X - Xmean) / Xstd
+
+# Discard the temporal dimension
 X = X.reshape(X.shape[0], -1)
 Y = classes[:,0]
 
