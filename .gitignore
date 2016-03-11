@@ -3,7 +3,6 @@
 *.npz
 *.arff
 
-# Dan's code
+# Models
 ###################
-gait_classification/representation_learning
 gait_classification/models
