@@ -10,6 +10,8 @@ from nn.NoiseLayer import NoiseLayer
 from nn.Pool1DLayer import Pool1DLayer
 
 from nn.AnimationPlot import animation_plot
+# Stick figures
+#from nn.AnimationPlotLines import animation_plot
 
 rng = np.random.RandomState(45425)
 
@@ -18,11 +20,17 @@ rng = np.random.RandomState(45425)
 # 451-468: Sexy walk
 X = np.load('./data_styletransfer.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
-# TODO: Why are we discarding joints?
 X = X[:,:-4]
 
-preprocess = np.load('styletransfer_preprocessed.npz')
-X = (X - preprocess['Xmean']) / preprocess['Xstd']
+preprocessed = np.load('styletransfer_preprocessed.npz')
+Xmean        = preprocessed['Xmean']
+Xmean        = Xmean.reshape(1,len(Xmean),1)
+Xstd         = preprocessed['Xstd']
+Xstd         = Xstd.reshape(1,len(Xstd),1)
+
+Xstd[np.where(Xstd == 0)] = 1
+
+X = (X - Xmean) / Xstd 
 
 from network import network
 network.load([
@@ -49,9 +57,8 @@ Xkick = X[angry_index:angry_index+1]
 Xchild = X[child_index:child_index+1]
 Xsexy = X[sexy_index:sexy_index+1]
 
-Xkick = (Xkick * preprocess['Xstd']) + preprocess['Xmean']
-Xchild = (Xchild * preprocess['Xstd']) + preprocess['Xmean']
-Xsexy = (Xsexy * preprocess['Xstd']) + preprocess['Xmean']
+Xkick = (Xkick * Xstd) + Xmean
+Xchild = (Xchild * Xstd) + Xmean
+Xsexy = (Xsexy * Xstd) + Xmean
 
 animation_plot([Xkick, Xchild, Xsexy], interval=15.15, labels=['Angry kick', 'Childlike walk', 'Sexy walk'])
-    
