@@ -28,7 +28,7 @@ class RBM(object):
         W=None,
         hbias=None,
         vbias=None,
-        numpy_rng=None,
+        np_rng=None,
         theano_rng=None
     ):
         """
@@ -58,12 +58,12 @@ class RBM(object):
         self.n_visible = n_visible
         self.n_hidden = n_hidden
 
-        if numpy_rng is None:
+        if np_rng is None:
             # create a number generator
-            numpy_rng = np.random.RandomState(1234)
+            np_rng = np.random.RandomState(1234)
 
         if theano_rng is None:
-            theano_rng = RandomStreams(numpy_rng.randint(2 ** 30))
+            theano_rng = RandomStreams(np_rng.randint(2 ** 30))
 
         if W is None:
             # W is initialized with `initial_W` which is uniformely
@@ -72,7 +72,7 @@ class RBM(object):
             # converted using asarray to dtype theano.config.floatX so
             # that the code is runable on GPU
             initial_W = np.asarray(
-                numpy_rng.uniform(
+                np_rng.uniform(
                     low=-4 * np.sqrt(6. / (n_hidden + n_visible)),
                     high=4 * np.sqrt(6. / (n_hidden + n_visible)),
                     size=(n_visible, n_hidden)
