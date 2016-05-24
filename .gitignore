@@ -6,3 +6,8 @@
 # Models
 ###################
 gait_classification/models
+gait_classification/data
+
+# Python
+###################
+*.pyc
