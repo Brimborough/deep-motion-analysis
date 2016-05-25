@@ -1,8 +1,8 @@
 import numpy as np
 import theano
 import theano.tensor as T
+
 from theano.tensor.shared_randomstreams import RandomStreams
-import scipy.io as io
 
 class HiddenLayer(object):
 
@@ -11,6 +11,7 @@ class HiddenLayer(object):
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         
         if W is None:
+            # TODO: W_bound depends on the activation function
             W_bound = np.sqrt(6. / np.prod(weights_shape))
             W = np.asarray(
                 rng.uniform(low=-W_bound, high=W_bound, size=weights_shape),
@@ -25,7 +26,7 @@ class HiddenLayer(object):
         self.params = [self.W, self.b]
         
     def __call__(self, input):
-        return self.W.T.dot(input.T).T + self.b
+        return input.dot(self.W) + self.b
         
     def inv(self, output):
         return self.W.dot((output - self.b).T).T 
