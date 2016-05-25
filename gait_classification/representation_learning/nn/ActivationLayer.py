@@ -6,7 +6,11 @@ class ActivationLayer(object):
 
     def __init__(self, rng, f='ReLU', g=lambda x: x, params=None):
         if   f == 'ReLU':
-            self.f = lambda x: T.switch(x<0,0,x)
+            self.f = T.nnet.relu
+            self.g = lambda x: x
+        elif f == 'PReLU':
+            # Avoids dying ReLU units
+            self.f = lambda x: T.nnet.relu(x, alpha=0.01)
             self.g = lambda x: x
         elif f == 'tanh':
             self.f = T.tanh
@@ -15,7 +19,10 @@ class ActivationLayer(object):
             self.f = T.nnet.sigmoid
             self.g = lambda x: x
         elif f == 'softmax':
-            self.f = T.nnet.softmax(x)
+            self.f = T.nnet.softmax
+            self.g = lambda x: x
+        elif f == 'softplus':
+            self.f = T.nnet.softplus
             self.g = lambda x: x
         elif f == 'identity':
             self.f = lambda x: x
