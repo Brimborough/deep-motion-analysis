@@ -60,18 +60,3 @@ class AutoEncodingNetwork(object):
     
     def save(self, filename): self.network.save(filename)
     def load(self, filename): self.network.load(filename)
-        
-class ClassifyingNetwork(object):
-
-    def __init__(self, network):
-        self.network = network
-        self.params = network.params
-        
-    def __call__(self, input):
-        return self.network.inv(self.network(input))
-    
-    def inv(self, output):
-        return self.network(self.network.inv(output))
-    
-    def save(self, filename): self.network.save(filename)
-    def load(self, filename): self.network.load(filename)
