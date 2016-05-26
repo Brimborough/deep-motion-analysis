@@ -20,20 +20,12 @@ valid_set_x, valid_set_y = datasets[1]
 test_set_x, test_set_y = datasets[2]
 
 network = Network(
-
-#    HiddenLayer
-#    def __init__(self, rng, weights_shape, W=None, b=None):
-#    BatchNormLayer
-#    def __init__(self, n_out, mode='low_mem'):
-#    ActivationLayer
-#    def __init__(self, rng, f='ReLU', g=lambda x: x, params=None):
-
     HiddenLayer(rng, (784, 500)),
-#    BatchNormLayer(500),
+    BatchNormLayer((784, 500)),
     ActivationLayer(rng, f='ReLU'),
 
     HiddenLayer(rng, (500, 10)),
-#    BatchNormLayer(10),
+    BatchNormLayer((500, 10)),
     ActivationLayer(rng, f='softmax')
 )
 
