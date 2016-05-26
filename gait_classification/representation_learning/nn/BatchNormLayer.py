@@ -22,14 +22,13 @@ class BatchNormLayer(object):
            Internal Covariate Shift. http://arxiv.org/abs/1502.03167.
     """
 
-    # TODO: Make this work for ConvNets
-    def __init__(self, n_out, mode='low_mem'):
+    def __init__(self, shape, mode='low_mem'):
         # BN shift parameter, must be of same dimensionality as inputs and broadcastable against it
         # One shift parameter for each dimension
-        self.beta = theano.shared(value = np.zeros((n_out,), dtype=theano.config.floatX), name='beta')
+        self.beta = theano.shared(value = np.zeros(shape[1:], dtype=theano.config.floatX), name='beta')
         # BN scale parameter, must be of same dimensionality as inputs and broadcastable against it
         # One scale paramter for each dimension
-        self.gamma = theano.shared(value = np.ones((n_out,), dtype=theano.config.floatX), name='gamma')
+        self.gamma = theano.shared(value = np.ones(shape[1:], dtype=theano.config.floatX), name='gamma')
 
         # 'low_mem' or 'high_mem'
         self.mode = mode
