@@ -1,7 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
-from theano import function
+from theano import function,printing
 
 from nn.AnimationPlot import animation_plot
 from nn.Network import Network, InverseNetwork
@@ -48,6 +48,8 @@ for input in range(0,len(X),BATCH_SIZE):
     Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval())
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval())
+
+    printing.Print('input')(input)
 
 #Save the noisy activations
 np.savez_compressed('NoisyHiddenActivations', *[Xnout[x] for x in range(len(Xnout))])

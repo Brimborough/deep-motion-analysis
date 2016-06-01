@@ -37,7 +37,8 @@ while True:
     
     Xorig = X[index:index+1]
     Xnois = (Xorig * rng.binomial(size=Xorig.shape, n=1, p=(1-amount)).astype(theano.config.floatX))
-        
+    # Replace with just Network and save the output.
+    #   - will work as is just demo of calling the network not training it!
     Xrecn = np.array(AutoEncodingNetwork(network)(Xnois).eval())
     Xrecn[:,-3:] = Xorig[:,-3:]
     
