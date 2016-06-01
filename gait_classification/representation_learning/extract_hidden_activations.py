@@ -45,9 +45,9 @@ for input in range(0,len(X),BATCH_SIZE):
     # Add Noise to data
     Xnois = (Xorig * rng.binomial(size=Xorig.shape, n=1, p=(1-amount)).astype(theano.config.floatX))
     # Build the noisy outputs
-    Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval())
+    Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval()).astype(theano.config.floatX)
     # Build the non-noisy outputs
-    Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval())
+    Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)
     i = theano.shared(input, 'i')
     printing.Print('i')(i)
 
