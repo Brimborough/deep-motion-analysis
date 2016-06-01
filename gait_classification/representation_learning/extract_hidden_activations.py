@@ -35,8 +35,8 @@ for layer in network.layers:
 Xnout = np.empty([17924,256,30], dtype=theano.config.floatX)
 Xoout = np.empty([17924,256,30], dtype=theano.config.floatX)
 
-
-for input in range(0,len(X),BATCH_SIZE):
+#Ignore the final 24, leads to errors.
+for input in range(0,len(X)-24,BATCH_SIZE):
 
     amount = 0.5
 
