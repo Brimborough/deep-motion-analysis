@@ -49,18 +49,6 @@ for input in range(0,len(X),BATCH_SIZE):
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval())
 
-
-    #Recreate the outputs to visualise we are getting the right outputs
-    ''' Uncomment to Visualise
-        Xrecn = np.array(InverseNetwork(network)(rec).eval())
-        Xrecn[:, -3:] = Xorig[:, -3:]
-
-        Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
-        Xnois = (Xnois * preprocess['Xstd']) + preprocess['Xmean']
-        Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
-
-        animation_plot([Xorig, Xnois, Xrecn], interval=15.15)
-    '''
 #Save the noisy activations
 np.savez_compressed('NoisyHiddenActivations', *[Xnout[x] for x in range(len(Xnout))])
 #Save the original activations

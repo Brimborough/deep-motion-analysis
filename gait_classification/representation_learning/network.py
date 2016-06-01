@@ -10,19 +10,20 @@ from nn.Network import Network, AutoEncodingNetwork
 
 rng = np.random.RandomState(23455)
 
+BATCH_SIZE = 100
 network = Network(
 
     NoiseLayer(rng, 0.3),
     
-    Conv1DLayer(rng, (64, 66, 25), (1, 66, 240)),
-    Pool1DLayer(rng, (2,), (1, 64, 240)),
+    Conv1DLayer(rng, (64, 66, 25), (BATCH_SIZE, 66, 240)),
+    Pool1DLayer(rng, (2,), (BATCH_SIZE, 64, 240)),
     ActivationLayer(rng),
 
-    Conv1DLayer(rng, (128, 64, 25), (1, 64, 120)),
-    Pool1DLayer(rng, (2,), (1, 128, 120)),
+    Conv1DLayer(rng, (128, 64, 25), (BATCH_SIZE, 64, 120)),
+    Pool1DLayer(rng, (2,), (BATCH_SIZE, 128, 120)),
     ActivationLayer(rng),
     
-    Conv1DLayer(rng, (256, 128, 25), (1, 128, 60)),
-    Pool1DLayer(rng, (2,), (1, 256, 60)),
+    Conv1DLayer(rng, (256, 128, 25), (BATCH_SIZE, 128, 60)),
+    Pool1DLayer(rng, (2,), (BATCH_SIZE, 256, 60)),
     ActivationLayer(rng)
 )
