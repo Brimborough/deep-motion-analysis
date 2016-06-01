@@ -48,8 +48,8 @@ for input in range(0,len(X),BATCH_SIZE):
     Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval())
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval())
-
-    printing.Print('input')(input)
+    i = theano.shared(input, 'i')
+    printing.Print('i')(i)
 
 #Save the noisy activations
 np.savez_compressed('NoisyHiddenActivations', *[Xnout[x] for x in range(len(Xnout))])
