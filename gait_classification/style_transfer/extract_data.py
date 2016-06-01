@@ -42,18 +42,17 @@ with open('styletransfer_styles_one_hot.npz', 'w') as sso_f:
     np.savez(sso_f, one_hot_vectors=one_hot_styles)
 
 # Convert to Weka's arff format
-with open('motion_classifcation.arff', 'w') as mc_f:
-
-    mc_f.write('@relation "motion_classification"\n\n')
-    
-    for i in range(nb_attributes):
-        mc_f.write('@attribute att_' + str(i) + ' numeric\n')
-
-    mc_f.write('@attribute class {0,1,2,3,4,5,6,7}\n')
-
-    mc_f.write('\n@data\n')
-    for i in range(nb_datapoints):
-        attr_class_list = list(clips[i].flatten()) + [classes[i][0]]
-        mc_f.write( ",".join(repr(item) for item in attr_class_list))
-        mc_f.write('\n')
-
+#with open('motion_classifcation.arff', 'w') as mc_f:
+#
+#    mc_f.write('@relation "motion_classification"\n\n')
+#    
+#    for i in range(nb_attributes):
+#        mc_f.write('@attribute att_' + str(i) + ' numeric\n')
+#
+#    mc_f.write('@attribute class {0,1,2,3,4,5,6,7}\n')
+#
+#    mc_f.write('\n@data\n')
+#    for i in range(nb_datapoints):
+#        attr_class_list = list(clips[i].flatten()) + [classes[i][0]]
+#        mc_f.write( ",".join(repr(item) for item in attr_class_list))
+#        mc_f.write('\n')
