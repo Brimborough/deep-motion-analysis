@@ -40,38 +40,42 @@ Y = classes[:,0]
 shuffled = zip(X,Y)
 np.random.shuffle(shuffled)
 
-split = int(X.shape[0] * 0.7)
+# 80% training, 20% test
+split = int(X.shape[0] * 0.8)
 
 X, Y = zip(*shuffled)
 X_train = np.array(X)[:split]
 Y_train = np.array(Y)[:split]
 
+X_test = np.array(X)[split:]
+Y_test = np.array(Y)[split:]
+
 print 'Naive Bayes:'
 nb = GaussianNB()
 nb.fit(X_train, Y_train)
-Z = nb.predict(X[split:])
-print accuracy_score(Z, Y[split:])
+Z = nb.predict(X_test)
+print accuracy_score(Z, Y_test)
 
 print 'Logistic regression:'
 logreg = linear_model.LogisticRegression()
 logreg.fit(X_train, Y_train)
-Z = logreg.predict(X[split:])
-print accuracy_score(Z, Y[split:])
+Z = logreg.predict(X_test)
+print accuracy_score(Z, Y_test)
 
 print 'SVM:'
 svm = LinearSVC()
 svm.fit(X_train, Y_train)
-Z = svm.predict(X[split:])
-print accuracy_score(Z, Y[split:])
+Z = svm.predict(X_test)
+print accuracy_score(Z, Y_test)
 
 print 'DT:'
 dt = DecisionTreeClassifier()
 dt.fit(X_train, Y_train)
-Z = dt.predict(X[split:])
-print accuracy_score(Z, Y[split:])
+Z = dt.predict(X_test)
+print accuracy_score(Z, Y_test)
 
 print 'KNN:'
 neigh = KNeighborsClassifier(n_neighbors=5)
 neigh.fit(X_train, Y_train)
-Z = neigh.predict(X[split:])
-print accuracy_score(Z, Y[split:])
+Z = neigh.predict(X_test)
+print accuracy_score(Z, Y_test)
