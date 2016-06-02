@@ -48,7 +48,7 @@ class AdamTrainer:
         gparams = T.grad(cost, self.params)
         m0params = [self.beta1 * m0p + (1-self.beta1) *  gp     for m0p, gp in zip(self.m0params, gparams)]
         m1params = [self.beta2 * m1p + (1-self.beta2) * (gp*gp) for m1p, gp in zip(self.m1params, gparams)]
-        params = [p - (self.alpha / self.batchsize) * 
+        params = [p - (self.alpha) * 
                   ((m0p/(1-(self.beta1**self.t[0]))) /
             (T.sqrt(m1p/(1-(self.beta2**self.t[0]))) + self.eps))
             for p, m0p, m1p in zip(self.params, m0params, m1params)]
