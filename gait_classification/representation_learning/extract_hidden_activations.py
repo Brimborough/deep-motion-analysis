@@ -1,16 +1,14 @@
 import numpy as np
 import theano
-import theano.tensor as T
-from theano import function,printing
+from theano import printing
 
-from nn.AnimationPlot import animation_plot
-from nn.Network import Network, InverseNetwork
+from nn.Network import Network
 from nn.NoiseLayer import NoiseLayer
 from nn.Pool1DLayer import Pool1DLayer
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
-BATCH_SIZE = 100
+BATCH_SIZE = 4481
 
 X = np.load('./data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
@@ -35,8 +33,8 @@ for layer in network.layers:
 Xnout = np.empty([17924,256,30], dtype=theano.config.floatX)
 Xoout = np.empty([17924,256,30], dtype=theano.config.floatX)
 
-#Ignore the final 24, leads to errors.
-for input in range(0,len(X)-24,BATCH_SIZE):
+# Go through inputs in factors of 4481
+for input in range(0,len(X),BATCH_SIZE):
 
     amount = 0.5
 
@@ -48,10 +46,7 @@ for input in range(0,len(X)-24,BATCH_SIZE):
     Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval()).astype(theano.config.floatX)
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)
-    i = theano.shared(input, 'i')
-    printing.Print('i')(i)
+
 
 #Save the noisy activations
-np.savez_compressed('NoisyHiddenActivations', *[Xnout[x] for x in range(len(Xnout))])
-#Save the original activations
-np.savez_compressed('OriginalHiddenActivations', *[Xoout[x] for x in range(len(Xoout))])
+np.savez_compressed('HiddenActivations', Noisy=Xnout, Orig=Xoout)
