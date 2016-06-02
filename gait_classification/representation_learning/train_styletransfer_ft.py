@@ -2,10 +2,17 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from nn.AdamTrainer import AdamTrainer
-from nn.Network import AutoEncodingNetwork
+import sys
+sys.path.append('../representation_learning/')
 
-from network import network
+from nn.ActivationLayer import ActivationLayer
+from nn.AdamTrainer import AdamTrainer
+from nn.BatchNormLayer import BatchNormLayer
+from nn.Conv1DLayer import Conv1DLayer
+from nn.HiddenLayer import HiddenLayer
+from nn.Network import Network
+from nn.Pool1DLayer import Pool1DLayer
+from nn.ReshapeLayer import ReshapeLayer
 
 rng = np.random.RandomState(23455)
 
@@ -20,9 +27,9 @@ X = clips[:,:-4]
 #(Motion, Styles)
 classes = data['classes']
 
-
 # get mean and std
 preprocessed = np.load('styletransfer_preprocessed.npz')
+
 Xmean = preprocessed['Xmean']
 Xmean = Xmean.reshape(1,len(Xmean),1)
 Xstd  = preprocessed['Xstd']
@@ -32,40 +39,65 @@ Xstd[np.where(Xstd == 0)] = 1
 
 X = (X - Xmean) / Xstd
 
+# Motion labels in one-hot vector format
+Y = np.load('styletransfer_motions_one_hot.npz')['one_hot_vectors']
+
 # Randomise data
 shuffled = zip(X,Y)
 np.random.shuffle(shuffled)
 
-split = int(X.shape[0] * 0.7)
+cv_split   = int(X.shape[0] * 0.6)
+test_split = int(X.shape[0] * 0.8)
 
-X, Y = zip(*shuffled)
-X_train = np.array(X)[:split]
-y_train = np.array(Y)[:split]
+X, Y = map(np.array, zip(*shuffled))
+X_train = theano.shared(np.array(X)[:cv_split], borrow=True)
+Y_train = theano.shared(np.array(Y)[:cv_split], borrow=True)
 
-# TODO: Cross Validation set?
-X_test = np.array(X)[split:]
-Y_test = np.array(Y)[split:]
+X_valid = theano.shared(np.array(X)[cv_split:test_split], borrow=True)
+Y_valid = theano.shared(np.array(Y)[cv_split:test_split], borrow=True)
 
-network_input  = theano.shared(X_train, borrow=True)
-network_output = theano.shared(Y_train, borrow=True)
+X_test = theano.shared(np.array(X)[test_split:], borrow=True)
+Y_test = theano.shared(np.array(Y)[test_split:], borrow=True)
 
-from network import network
-# Load the pre-trained model
-network.load([None,
-              '../models/layer_0.npz', None, None,
+network = Network(
+    Conv1DLayer(rng, (64, 66, 25), (1, 66, 240)),
+    Pool1DLayer(rng, (2,), (1, 64, 240)),
+    ActivationLayer(rng, f='ReLU'),
+
+    Conv1DLayer(rng, (128, 64, 25), (1, 64, 120)),
+    Pool1DLayer(rng, (2,), (1, 128, 120)),
+    ActivationLayer(rng, f='ReLU'),
+    
+    Conv1DLayer(rng, (256, 128, 25), (1, 128, 60)),
+    Pool1DLayer(rng, (2,), (1, 256, 60)),
+    ActivationLayer(rng, f='ReLU'),
+
+    # Final pooling gives 1, 256, 30 
+
+    # 256*60 = 7680
+    ReshapeLayer(rng, (7680, )),
+    HiddenLayer(rng, (np.prod([1, 256, 30]), 8)),
+    ActivationLayer(rng, f='softmax'),
+)
+
+# Load the pre-trained conv-layers
+network.load(['../models/layer_0.npz', None, None,
               '../models/layer_1.npz', None, None,
-              '../models/layer_2.npz', None, None,])
+              '../models/layer_2.npz', None, None, 
+              None, None, None])
 
-# Add layers for classification
-network.append(ActivationLayer(rng=rng, f='softmax', g=lambda x: x, params=None))
-
-trainer = AdamTrainer(rng, batchsize=1, epochs=25, alpha=0.00001)
+trainer = AdamTrainer(rng=rng, batchsize=1, epochs=1, alpha=0.1, cost='cross_entropy')
 
 # Fine-tuning for classification
-trainer.train(network=ClassifyingNetwork(network), input_data=network_input, 
-                                                   output_data=network_output, 
-                                                   filename=[None,
-                                                             'layer_0.npz', None, None,
-                                                             'layer_1.npz', None, None,
-                                                             'layer_2.npz', None, None,
-                                                             'softmax.npz', None, None,])
+trainer.train(network=network, train_input=X_train, train_output=Y_train, 
+                               valid_input=X_valid, valid_output=Y_valid,
+                               test_input=X_test, test_output=Y_test,
+                               # Don't save the params
+                               filename=[None] * len(network.layers))
+
+# Don't save anyting for now
+#filename=[None,
+#'layer_0_finetuned.npz', None, None,
+#'layer_1_finetuned.npz', None, None,
+#'layer_2_finetuned.npz', None, None,
+#None, 'layer_3_finetuned.npz', None,])
