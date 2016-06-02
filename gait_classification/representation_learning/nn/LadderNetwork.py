@@ -29,7 +29,6 @@ class LadderNetwork(object):
         else:
             self.params = kw.get('params', None)
 
-
         # Needed to calculate the reconstruction error.
         # z is the weighted input
         self.clean_z = []
@@ -73,32 +72,37 @@ class LadderNetwork(object):
 
     def __call__(self, input):
         # Encoder part of the denoising autoencoder
-        noisy_pass = self.noisy_prop(input)
+        noisy_pass = self.noisy_fprop(input)
         # To supply denoising targets and classification inputs
-        clean_pass = self.clean_prop(input)
+        clean_pass = self.clean_fprop(input)
         self.predictions = self.predict(clean_pass)
 
         # Decoder part of the denoising autoencoder
-        self.decode(noisy_pass)
+        self.inv(noisy_pass)
 
         return clean_pass
 
     def clean_fprop(self, input):
         self.clean_z = []
-        for layer in self.layers: 
+        for layer in self.layers:
+
             if (type(layer) is GaussianNoiseLayer):
                 # Skip noise layer, add denoising target
-                self.clean_z.append(clean_pass)
+                self.clean_z.append(input)
             else:
-                clean_pass = layer(clean_pass)
+                input = layer(input)
+
+        return input
 
     def noisy_fprop(self, input):
         self.noisy_z = []
+
         for layer in self.layers: 
             input = layer(input)
             # Assuming noise layers come directly before activations
             if (type(layer) is GaussianNoiseLayer):
                 self.noisy_z.append(input)
+
         return input
     
     def inv(self, output):
