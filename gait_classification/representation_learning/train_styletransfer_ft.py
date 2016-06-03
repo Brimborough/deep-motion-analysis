@@ -5,18 +5,18 @@ import theano.tensor as T
 import sys
 sys.path.append('../representation_learning/')
 
-from nn.ActivationLayer import ActivationLayer
-from nn.AdamTrainer import AdamTrainer
-from nn.BatchNormLayer import BatchNormLayer
-from nn.Conv1DLayer import Conv1DLayer
-from nn.HiddenLayer import HiddenLayer
-from nn.Network import Network
-from nn.Pool1DLayer import Pool1DLayer
-from nn.ReshapeLayer import ReshapeLayer
+#from nn.ActivationLayer import ActivationLayer
+#from nn.AdamTrainer import AdamTrainer
+#from nn.BatchNormLayer import BatchNormLayer
+#from nn.Conv1DLayer import Conv1DLayer
+#from nn.HiddenLayer import HiddenLayer
+#from nn.Network import Network
+#from nn.Pool1DLayer import Pool1DLayer
+#from nn.ReshapeLayer import ReshapeLayer
 
 rng = np.random.RandomState(23455)
 
-data = np.load('data_styletransfer.npz')
+data = np.load('../data/data_styletransfer.npz')
 
 #(Examples, Time frames, joints)
 clips = data['clips']
@@ -28,7 +28,7 @@ X = clips[:,:-4]
 classes = data['classes']
 
 # get mean and std
-preprocessed = np.load('styletransfer_preprocessed.npz')
+preprocessed = np.load('../data/styletransfer_preprocessed.npz')
 
 Xmean = preprocessed['Xmean']
 Xmean = Xmean.reshape(1,len(Xmean),1)
@@ -40,7 +40,7 @@ Xstd[np.where(Xstd == 0)] = 1
 X = (X - Xmean) / Xstd
 
 # Motion labels in one-hot vector format
-Y = np.load('styletransfer_motions_one_hot.npz')['one_hot_vectors']
+Y = np.load('../data/styletransfer_motions_one_hot.npz')['one_hot_vectors']
 
 # Randomise data
 shuffled = zip(X,Y)
