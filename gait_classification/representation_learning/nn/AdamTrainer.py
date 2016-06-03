@@ -6,6 +6,7 @@ import theano.tensor as T
 
 from theano.tensor.shared_randomstreams import RandomStreams
 from datetime import datetime
+from LadderNetwork import LadderNetwork
 
 class AdamTrainer(object):
     
@@ -19,19 +20,26 @@ class AdamTrainer(object):
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         self.epochs = epochs
         self.batchsize = batchsize
+
+        # Where cost is always the cost which is minimised in supervised training
+        # the T.nonzero term ensures that the cost is only calculated for examples with a label
+        #
+        # Convetion: Labels are one-hot
         if   cost == 'mse':
-            self.cost = lambda network, x, y: T.mean((network(x) - y)**2)
+            self.cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
-            self.error = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
-            self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred, y).mean()
+            self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
+            # classification error
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
         elif cost == 'cross_entropy':
             self.y_pred = lambda network, x: network(x)
-            self.error = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
-            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred, y).mean()
+            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
+            # classification error
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
         else:
             self.cost = cost
-        
+
     def regularization(self, network, target=0.0):
         # L1 regularisation
         return sum([T.mean(abs(p - target)) for p in network.params]) / len(network.params)
@@ -193,81 +201,57 @@ class AdamTrainer(object):
 
 class LadderAdamTrainer(AdamTrainer):
     """
-    AdamTrainer for ladder networks. This seperation into two classes is necessary due
-    to the two-fold cost objective of the ladder network. 
+    AdamTrainer for ladder networks (see [1]). This seperation into two classes is necessary due
+    to the two-fold cost objective of the ladder network. This imlements a basic semi-supervised
+    cost.
 
     References:
         [1] Rasmus, Antti, et al. "Semi-Supervised Learning with Ladder Networks." 
         Advances in Neural Information Processing Systems. 2015."""
 
-    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, supervised_gamma=0.1, unsupervised_gamma=0.1, supervised_cost='cross_entropy'): 
+    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, 
+                 supervised_gamma=0.1, unsupervised_gamma=0.1, supervised_cost='cross_entropy'): 
 
-        self.alpha = alpha
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.eps = eps
-        self.supervised_gamma   = supervised_gamma
+        # Initialises all components needed to calulate the supervised cost of the network
+        super(LadderAdamTrainer, self).__init__(rng=rng, batchsize=batchsize, epochs=epochs,
+                                                alpha=alpha, beta1=beta1, beta2=beta2, eps=eps, 
+                                                gamma=supervised_gamma, cost=supervised_cost)
+
         self.unsupervised_gamma = unsupervised_gamma
-        self.rng = rng
-        self.theano_rng = RandomStreams(rng.randint(2 ** 30))
-        self.epochs = epochs
-        self.batchsize = batchsize
-
-        # This will not be callable outside of the constructor
-#        def create_cost(self, cost, var_name):
-#            if   cost == 'mse':
-#                exec('self.%s_cost = lambda network, x, y: T.mean((network(x) - y)**2)'% (var_name))
-#            elif cost == 'binary_cross_entropy':
-#                exec('self.%s_y_pred = lambda network, x: network(x)'% (var_name))
-#                exec('self.%s_error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), y))'% (var_name))
-#                exec('self.%s_cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred, y).mean()'% (var_name))
-#            elif cost == 'cross_entropy':
-#                exec('self.%s_y_pred = lambda network, x: network(x)'% (var_name))
-#                exec('self.%s_error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), y))'% (var_name))
-#                exec('self.%s_cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred, y).mean()'% (var_name))
-#            else:
-#                exec('self.%_cost = cost)'% (var_name))
-#
-#        create_cost(supervised_cost, 'supervised')
-#        create_cost(unsupervised_cost, 'unsupervised')
-
-        # Create the supervised cost functions. The term with T.nonzero selects only the training examples with a label.
-        if   supervised_cost == 'mse':
-            self.s_cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
-        elif supervised_cost == 'binary_cross_entropy':
-            self.y_pred = lambda network, x: network(x)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), y))
-            self.s_cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-        elif supervised_cost == 'cross_entropy':
-            self.y_pred = lambda network, x: network(x)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), y))
-            self.s_cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-        else:
-            self.s_cost = supervised_cost
         
         # Will be used to calculate the unsupervised cost
         self.mse = lambda network, x, y: T.mean((network(x) - y)**2)
 
-    def us_cost(self, network, lambdas):
+    def unsupervised_cost(self, network, lambdas):
         """
-        Unsupervised cost is the sum of a weighted layerwise MSE. The weights are given by lambdas.
+        Unsupervised cost is the sum of a weighted layerwise MSE.
         C = \sum_{l=0}^L \lambda_i ||\mathbf{z}^{(l)} - \hat{\mathbf{z}}^{(l)}_{\mathbf{BN}}||^2 
-        
+
+        lambdas: Weight corresponding to the contribution of the mse for each pair of layers, given
+                 bottom-to-top, i.e. lambdas[0] is the weight of the reconstruction error for the first
+                 encoder and last decoder layer
         """
 
         layerwise_mse = 0.
         # TODO: Theano's scan?
-        for pair in zip(lambdas, network.clean_z[::-1], network.reconstructions):
-            layerwise_mse += pair[0] * self.mse(pair[1], pair[2])
+        # As the network's reconstructions are collected during the downward pass,
+        # we must iterate through the list in revese to obtain the matching pairs
+        for pair in zip(lambdas, network.clean_z, network.reconstructions[::-1]):
+            if (0.0 < pair[0]):
+                layerwise_mse += pair[0] * self.mse(pair[1], pair[2])
 
         return layerwise_mse
 
     def get_cost_updates(self, network, input, output):
+
+        if (type(network) is not LadderNetwork):
+            raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
         
         y_pred = self.y_pred(network, input)
-        # Only add this if input comes with a label
-        cost = self.s_cost(network, y_pred, output) + self.supervised_gamma * super(LadderAdamTrainer, self).regularization(network)
-        cost += self.us_cost(network) + self.unsupervised_gamma * super(LadderAdamTrainer, self).regularization(network)
+        # supervised cost
+        cost = self.cost(network, y_pred, output) + self.gamma * super(LadderAdamTrainer, self).regularization(network)
+        # unsupervised cost
+        cost += self.unsupervised_cost(network) + self.unsupervised_gamma * super(LadderAdamTrainer, self).regularization(network)
         error = None
 
         if (self.error):
@@ -287,13 +271,13 @@ class LadderAdamTrainer(AdamTrainer):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (s_cost, us_cost, updates, error)
+        return (cost, updates, error)
         
     def train(self, network, train_input, train_output,
                              valid_input=None, valid_output=None,
                              test_input=None, test_output=None, filename=None):
 
         """
-        Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
+        Conventions: For training examples with labels, pass a one-hot vector, otherwise an array with zero values and equal dimensionality.
         """
         super(LadderAdamTrainer, self).train(network, train_input, train_output, valid_input, valid_output, test_input, test_output, filename)
