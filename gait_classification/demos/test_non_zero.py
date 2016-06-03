@@ -10,7 +10,7 @@ countPercent = np.zeros(len(X))
 for i in range(len(X)):
     # Go through from 1 to 17924 checking if any arr got a number
     countNumZeros[i] = not X[i].any()
-    countPercent[i] = np.non_zero(X[i])
+    countPercent[i] = np.count_nonzero(X[i])
 
 
 countNumZeros = countNumZeros.astype(int)
