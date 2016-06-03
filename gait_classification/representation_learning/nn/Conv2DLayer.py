@@ -11,6 +11,9 @@ class Conv2DLayer(object):
         self.filter_shape = filter_shape
         self.input_shape = input_shape
         self.output_shape = (input_shape[0], filter_shape[0], input_shape[2], input_shape[3])
+        self.input_units = np.prod(self.input_shape)
+        self.output_units = np.prod(self.output_shape)
+
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         
         fan_in = np.prod(filter_shape[1:])
