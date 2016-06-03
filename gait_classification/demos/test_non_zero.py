@@ -17,4 +17,4 @@ countNumZeros = countNumZeros.astype(int)
 
 assert (np.sum(countNumZeros)==0)
 
-print 'Percent not zero: ' + str(np.sum(countPercent).astype(float)/np.sum(X.shape))
+print 'Percent not zero: ' + str(np.sum(countPercent).astype(float)/np.sum(X.shape[0]*X.shape[1]*X.shape[2]))
