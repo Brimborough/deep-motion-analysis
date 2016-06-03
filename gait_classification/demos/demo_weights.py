@@ -1,14 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.append('../representation_learning/')
+
 from nn.Conv1DLayer import Conv1DLayer
 
 from network import network
 network.load([
     None,
-    'layer_0.npz', None, None,
-    'layer_1.npz', None, None,
-    'layer_2.npz', None, None,
+    '../models/conv_ae/layer_0.npz', None, None,
+    '../models/conv_ae/layer_1.npz', None, None,
+    '../models/conv_ae/layer_2.npz', None, None,
 ])
 
 for li, layer in enumerate(network.layers):

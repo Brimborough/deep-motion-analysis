@@ -2,6 +2,9 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+import sys
+sys.path.append('../representation_learning/')
+
 from nn.Network import AutoEncodingNetwork
 from nn.NoiseLayer import NoiseLayer
 from nn.Pool1DLayer import Pool1DLayer
@@ -10,20 +13,20 @@ from nn.AnimationPlot import animation_plot
 
 rng = np.random.RandomState(45425)
 
-X = np.load('./data_cmu.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
-preprocess = np.load('preprocess.npz')
+preprocess = np.load('../data/preprocess.npz')
 
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 from network import network
 network.load([
     None,
-    'layer_0.npz', None, None,
-    'layer_1.npz', None, None,
-    'layer_2.npz', None, None,
+    '../models/conv_ae/layer_0.npz', None, None,
+    '../models/conv_ae/layer_1.npz', None, None,
+    '../models/conv_ae/layer_2.npz', None, None,
 ])
 
 for layer in network.layers:
