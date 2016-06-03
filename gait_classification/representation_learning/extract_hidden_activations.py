@@ -10,19 +10,20 @@ rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
 BATCH_SIZE = 4481
 
-X = np.load('./data_cmu.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
-X = X[:,:-4]
+X = X[:,:-4] # - cut foot contact
 
-preprocess = np.load('preprocess.npz')
+preprocess = np.load('../data/Joe/preprocess.npz')
+
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 from network import network
 network.load([
     None,
-    'layer_0.npz', None, None,
-    'layer_1.npz', None, None,
-    'layer_2.npz', None, None,
+    '../models/conv_ae/layer_0.npz', None, None,
+    '../models/conv_ae/layer_1.npz', None, None,
+    '../models/conv_ae/layer_2.npz', None, None,
 ])
 
 for layer in network.layers:

@@ -9,7 +9,7 @@ from network import network
 
 rng = np.random.RandomState(23455)
 
-X = np.load('./data_cmu.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
@@ -20,7 +20,7 @@ Xstd = np.array([[[X.std()]]]).repeat(X.shape[1], axis=1)
 Xstd[:,-3:-1] = X[:,-3:-1].std()
 Xstd[:,-1:  ] = X[:,-1:  ].std()
 
-np.savez_compressed('preprocess.npz', Xmean=Xmean, Xstd=Xstd)
+np.savez_compressed('../data/Joe/preprocess.npz', Xmean=Xmean, Xstd=Xstd)
 
 X = (X - Xmean) / Xstd
 
@@ -39,7 +39,7 @@ E = theano.shared(X, borrow=True)
 trainer = AdamTrainer(rng, batchsize=1, epochs=25, alpha=0.00001)
 trainer.train(AutoEncodingNetwork(network), E, E, [
     None,
-    'layer_0.npz', None, None,
-    'layer_1.npz', None, None,
-    'layer_2.npz', None, None,
+    '../models/conv_ae/layer_0.npz', None, None,
+    '../models/conv_ae/layer_1.npz', None, None,
+    '../models/conv_ae/layer_2.npz', None, None,
 ])
