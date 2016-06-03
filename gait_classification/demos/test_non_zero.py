@@ -1,6 +1,6 @@
 import numpy as np
 
-X = np.load('HiddenActivations.npz')['Orig']
+X = np.load('../representation_learning/HiddenActivations.npz')['Orig']
 
 # 1to1 array for counting
 countNumZeros = np.zeros(len(X))
