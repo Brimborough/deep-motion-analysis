@@ -1,3 +1,6 @@
+'''
+    Simply saving the preprocessed data since it seems to be called everywhere.
+'''
 import numpy as np
 import theano
 import sys
