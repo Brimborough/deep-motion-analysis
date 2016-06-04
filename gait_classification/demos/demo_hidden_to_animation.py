@@ -22,9 +22,8 @@ X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4] # - Remove foot contact
 
 preprocess = np.load('../data/Joe/preprocess.npz')
-X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
-H = np.load('../data/Joe/HiddenActivations.npz')['Noisy']
+H = np.load('../data/Joe/HiddenActivations.npz')['Orig']
 
 from network import network
 network.load([
@@ -38,25 +37,28 @@ for layer in network.layers:
     if isinstance(layer, NoiseLayer): layer.amount = 0.0
     if isinstance(layer, Pool1DLayer):  layer.depooler = lambda x, **kw: x/2
 
-# Go through inputs in factors of 4481
-for input in range(len(X)):
+
+# Go through inputs 1by1
+for input in range(5): #range(len(X)):
 
     Xorig = X[input:input+1]
 
-    #Add dim
-    shared = np.zeros((1,H.shape[1], H.shape[2]))
-    shared[0] = H[input]
     #Theano shared object to pass to network
-    shared = theano.shared(shared)
+    shared = theano.shared(H[input:input+1])
+
     # Recreate
-    Xrecn = np.array(InverseNetwork(network)(shared).eval())
+    Xrecn = np.array(InverseNetwork(network)(shared).eval()).astype(theano.config.floatX)
+
+    print Xrecn.shape
+    print Xorig.shape
 
     #Last 3 - Velocities so similar root
     Xrecn[:,-3:] = Xorig[:,-3:]
 
-    Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
-    #Xnois = (Xnois * preprocess['Xstd']) + preprocess['Xmean']
+    assert(Xrecn[0,-3] == Xorig[0,-3])
+
     Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
+    print Xrecn
 
     animation_plot([Xorig, Xrecn], interval=15.15)
 
