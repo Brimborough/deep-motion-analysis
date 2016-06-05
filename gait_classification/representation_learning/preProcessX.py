@@ -15,4 +15,4 @@ X = X[:,:-4] # - Remove foot contact
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 #Save the preprocessed data
-np.savez_compressed('../data/Joe/preProcX', preX=X)
+np.savez_compressed('../data/Joe/preProcX', clips=X)
