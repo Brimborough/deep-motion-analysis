@@ -15,7 +15,7 @@ from nn.AnimationPlot import animation_plot
 rng = np.random.RandomState(23455)
 
 #Load the preprocessed version, saving on computation
-X = np.load('../data/Joe/preProcX.npz')['preX']
+X = np.load('../data/Joe/preProcX.npz')['clips']
 preprocess = np.load('../data/Joe/preprocess.npz')
 H = np.load('../data/Joe/HiddenActivations.npz')['Orig']
 
