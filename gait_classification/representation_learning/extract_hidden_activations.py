@@ -7,18 +7,10 @@ from nn.Pool1DLayer import Pool1DLayer
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
-BATCH_SIZE = 4481
+BATCH_SIZE = 1
 
 #Load the preprocessed to save some time
-#X = np.load('../data/Joe/preProcX.npz')['clips']
-X = np.load('../data/data_cmu.npz')['clips']
-preprocess = np.load('../data/Joe/preprocess.npz')
-
-X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
-X = X[:,:-4] # - Remove foot contact
-X = (X - preprocess['Xmean']) / preprocess['Xstd']
-
-preprocess = np.load('../data/Joe/preprocess.npz')
+X = np.load('../data/Joe/preProcX.npz')['clips']
 
 
 from network import network
