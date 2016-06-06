@@ -15,8 +15,12 @@ from nn.AnimationPlot import animation_plot
 rng = np.random.RandomState(23455)
 
 #Load the preprocessed version, saving on computation
-X = np.load('../data/Joe/preProcX.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
+X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
+X = X[:,:-4]
+
 preprocess = np.load('../data/Joe/preprocess.npz')
+X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 H = np.load('../data/Joe/HiddenActivations.npz')['Orig']
 
