@@ -10,7 +10,13 @@ rng = np.random.RandomState(23455)
 BATCH_SIZE = 4481
 
 #Load the preprocessed to save some time
-X = np.load('../data/Joe/preProcX.npz')['clips']
+#X = np.load('../data/Joe/preProcX.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
+preprocess = np.load('../data/Joe/preprocess.npz')
+
+X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
+X = X[:,:-4] # - Remove foot contact
+X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 preprocess = np.load('../data/Joe/preprocess.npz')
 
