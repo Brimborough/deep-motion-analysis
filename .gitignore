@@ -16,3 +16,4 @@ gait_classification/data
 ###################
 *.xml
 *.txt
+*~
