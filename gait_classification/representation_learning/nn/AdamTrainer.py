@@ -10,12 +10,13 @@ from LadderNetwork import LadderNetwork
 
 class AdamTrainer(object):
     
-    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, gamma=0.1, cost='mse'):
+    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, l1_weight=0.0, l2_weight=0.1, cost='mse'):
         self.alpha = alpha
         self.beta1 = beta1
         self.beta2 = beta2
         self.eps = eps
-        self.gamma = gamma
+        self.l1_weight = l1_weight
+        self.l2_weight = l2_weight
         self.rng = rng
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         self.epochs = epochs
@@ -40,14 +41,19 @@ class AdamTrainer(object):
         else:
             self.cost = cost
 
-    def regularization(self, network, target=0.0):
-        # L1 regularisation
-        return sum([T.mean(abs(p - target)) for p in network.params]) / len(network.params)
+    def l1_regularization(self, network, target=0.0):
+        # The if term ensures we do not regularise biases
+        # TODO: This will cause problems for a single output unit, fix this
+        return sum([T.mean(abs(p - target)) for p in network.params if (len(p.shape.eval()) > 1)])
+
+    def l2_regularization(self, network, target=0.0):
+        return sum([T.mean((p - target)**2) for p in network.params if (len(p.shape.eval()) > 1)])
         
     def get_cost_updates(self, network, input, output):
         
         y_pred = self.y_pred(network, input)
-        cost = self.cost(network, y_pred, output) + self.gamma * self.regularization(network)
+        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
+                                                    self.l2_weight * self.l2_regularization(network)
         error = None
 
         if (self.error):
@@ -210,14 +216,16 @@ class LadderAdamTrainer(AdamTrainer):
         Advances in Neural Information Processing Systems. 2015."""
 
     def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, 
-                 supervised_gamma=0.1, unsupervised_gamma=0.1, supervised_cost='cross_entropy'): 
+                 supervised_l1_weight=0.0, unsupervised_l1_weight=0.0, 
+                 supervised_l2_weight=0.1, unsupervised_l2_weight=0.1, supervised_cost='cross_entropy'): 
 
         # Initialises all components needed to calulate the supervised cost of the network
         super(LadderAdamTrainer, self).__init__(rng=rng, batchsize=batchsize, epochs=epochs,
                                                 alpha=alpha, beta1=beta1, beta2=beta2, eps=eps, 
-                                                gamma=supervised_gamma, cost=supervised_cost)
+                                                l1_weight=supervised_l1_weight, l2_weight=supervised_l2_weight, cost=supervised_cost)
 
-        self.unsupervised_gamma = unsupervised_gamma
+        self.unsupervised_l1_weight = unsupervised_l1_weight
+        self.unsupervised_l2_weight = unsupervised_l2_weight
         
         # Will be used to calculate the unsupervised cost
         self.mse = lambda network, x, y: T.mean((network(x) - y)**2)
@@ -249,9 +257,12 @@ class LadderAdamTrainer(AdamTrainer):
         
         y_pred = self.y_pred(network, input)
         # supervised cost
-        cost = self.cost(network, y_pred, output) + self.gamma * super(LadderAdamTrainer, self).regularization(network)
+        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
+                                                    self.l2_weight * self.l2_regularization(network)
+
         # unsupervised cost
-        cost += self.unsupervised_cost(network) + self.unsupervised_gamma * super(LadderAdamTrainer, self).regularization(network)
+        cost += self.unsupervised_cost(network) + self.unsupervised_l1_weight * self.l1_regularization(network) + \
+                                                  self.unsupervised_l2_weight * self.l2_regularization(network)
         error = None
 
         if (self.error):
