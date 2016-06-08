@@ -1,6 +1,5 @@
 import numpy as np
 import theano
-from theano import printing
 
 from nn.Network import Network
 from nn.NoiseLayer import NoiseLayer
@@ -8,21 +7,23 @@ from nn.Pool1DLayer import Pool1DLayer
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
-BATCH_SIZE = 4481
+BATCH_SIZE = 1
 
-X = np.load('./data_cmu.npz')['clips']
+#Load the preprocessed to save some time
+X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
-preprocess = np.load('preprocess.npz')
+preprocess = np.load('../data/Joe/preprocess.npz')
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
+
 
 from network import network
 network.load([
     None,
-    'layer_0.npz', None, None,
-    'layer_1.npz', None, None,
-    'layer_2.npz', None, None,
+    '../models/conv_ae/layer_0.npz', None, None,
+    '../models/conv_ae/layer_1.npz', None, None,
+    '../models/conv_ae/layer_2.npz', None, None,
 ])
 
 for layer in network.layers:
@@ -43,10 +44,9 @@ for input in range(0,len(X),BATCH_SIZE):
     # Add Noise to data
     Xnois = (Xorig * rng.binomial(size=Xorig.shape, n=1, p=(1-amount)).astype(theano.config.floatX))
     # Build the noisy outputs
-    Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval()).astype(theano.config.floatX)
+    Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval()).astype(theano.config.floatX)[:]
     # Build the non-noisy outputs
-    Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)
-
+    Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)[:]
 
 #Save the noisy activations
-np.savez_compressed('HiddenActivations', Noisy=Xnout, Orig=Xoout)
+np.savez_compressed('../data/Joe/HiddenActivations', Noisy=Xnout, Orig=Xoout)

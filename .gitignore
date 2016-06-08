@@ -15,3 +15,5 @@ gait_classification/data
 # MISC
 ###################
 *.xml
+*.txt
+*~

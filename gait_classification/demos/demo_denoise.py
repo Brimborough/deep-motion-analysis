@@ -19,7 +19,7 @@ X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
-preprocess = np.load('../data/preprocess.npz')
+preprocess = np.load('../data/Joe/preprocess.npz')
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 from network import network
