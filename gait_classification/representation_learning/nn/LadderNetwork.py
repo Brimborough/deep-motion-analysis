@@ -55,9 +55,6 @@ class LadderNetwork(object):
         # Used to pass on information through skip-connections
         self.noisy_z = []
 
-        # classification
-        self.predict = lambda y_pred: T.argmax(y_pred, axis=1)
-
         # As only hidden layers or conv layers encode units, we can simply
         # loop through all such layers and save the number of units
         n_units =  [l.output_units for l in self.decoding_layers if (hasattr(l, 'output_units'))]
@@ -69,28 +66,6 @@ class LadderNetwork(object):
 
         self.params += self.As
 
-#        # U is the input from a downward pass in the decoder
-#        U = T.dmatrix('U')
-#        # Index for self.As
-#        i = T.iscalar('i')
-#        # Where o is used to switch between computation of mu and v
-#        o = T.iscalar('offset')
-#
-#        # This is used to calculate the result of the mu and v functions used in eq. (2)
-#        self.compute_mu_v = []
-#
-#        # TODO: At the moment, we have to create a function for each layer, fix this
-#        for i in range(len(n_units)):
-#            Y = self.As[i][:,0+o] * T.nnet.sigmoid(U*self.As[i][:,1+o] + self.As[i][:,2+o]) + U*self.As[i][:,3+o] + self.As[i][:,4+o]
-#            self.compute_mu_v.append(theano.function([U, theano.In(o, value=0)], Y))
-
-        # Implements a skip-connection
-#        noisy_Z = T.dmatrix('noisy_Z')
-#        mu_of_U = T.dmatrix('mu_of_U')
-#        v_of_U  = T.dmatrix('v_of_U')
-#        Z_reconstruction = (noisy_Z - mu_of_U) * v_of_U + mu_of_U
-#        self.g = theano.function([noisy_Z, mu_of_U, v_of_U], Z_reconstruction)
-
         # Used to batch-normalise before running the decoder
         self.bn = BatchNormLayer((1, n_units[0]))
         self.params += self.bn.params
@@ -100,12 +75,13 @@ class LadderNetwork(object):
         noisy_pass = self.noisy_fprop(input)
         # To supply denoising targets and classification inputs
         clean_pass = self.clean_fprop(input)
-        # TODO: the original paper uses the noisy pass here - why?
-        self.predictions = self.predict(clean_pass)
 
         # Decoder part of the denoising autoencoder
         self.inv(self.bn(noisy_pass))
+        # Reverse list to allow for direct comparison with clean_pass
+        self.reconstructions = self.reconstructions[::-1]
 
+        # TODO: the original paper uses the noisy pass here - why?
         return clean_pass
 
     def clean_fprop(self, input):
@@ -175,7 +151,7 @@ class LadderNetwork(object):
 
     def skip_connect(self, input, layer_index):
         if ([] == self.noisy_z):
-            raise ValueError('Error: noisy_z is an empty list')
+            raise ValueError('Error: noisy_z is an empty list, noisy_fprop must be run before skip_connect')
 
         MU = self.compute_mu(input, self.As[layer_index])
         V  = self.compute_v(input, self.As[layer_index])

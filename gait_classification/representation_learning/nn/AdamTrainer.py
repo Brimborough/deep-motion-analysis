@@ -24,7 +24,7 @@ class AdamTrainer(object):
         # Where cost is always the cost which is minimised in supervised training
         # the T.nonzero term ensures that the cost is only calculated for examples with a label
         #
-        # Convetion: Labels are one-hot
+        # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
         if   cost == 'mse':
             self.cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
         elif cost == 'binary_cross_entropy':
@@ -73,8 +73,7 @@ class AdamTrainer(object):
                              valid_input=None, valid_output=None,
                              test_input=None, test_output=None, filename=None):
 
-        """
-        Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
+        """ Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
         """
         
         input = train_input.type()
@@ -220,7 +219,7 @@ class LadderAdamTrainer(AdamTrainer):
         self.unsupervised_gamma = unsupervised_gamma
         
         # Will be used to calculate the unsupervised cost
-        self.mse = lambda network, x, y: T.mean((network(x) - y)**2)
+        self.mse = lambda x, y: T.mean((x - y)**2)
 
     def unsupervised_cost(self, network, lambdas):
         """
@@ -236,7 +235,7 @@ class LadderAdamTrainer(AdamTrainer):
         # TODO: Theano's scan?
         # As the network's reconstructions are collected during the downward pass,
         # we must iterate through the list in revese to obtain the matching pairs
-        for pair in zip(lambdas, network.clean_z, network.reconstructions[::-1]):
+        for pair in zip(lambdas, network.clean_z, network.reconstructions):
             if (0.0 < pair[0]):
                 layerwise_mse += pair[0] * self.mse(pair[1], pair[2])
 
