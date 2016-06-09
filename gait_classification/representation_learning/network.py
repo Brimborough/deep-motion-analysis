@@ -10,7 +10,7 @@ from nn.Network import Network, AutoEncodingNetwork
 
 rng = np.random.RandomState(23455)
 
-BATCH_SIZE = 100
+BATCH_SIZE = 1
 network = Network(
 
     NoiseLayer(rng, 0.3),

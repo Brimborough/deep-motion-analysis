@@ -34,17 +34,13 @@ class BatchNormLayer(object):
         return (input - mean) * (self.gamma / std) + self.beta
 
     def inv(self, output): 
-        return self(output)
+        return output
         
-    def load(self, filename):   
-        if filename is None: return
-        if not filename.endswith('.npz'): filename+='.npz'
-        data = np.load(filename)
-        self.beta = theano.shared(data['beta'].astype(theano.config.floatX), borrow=True)
-        self.gamma = theano.shared(data['gamma'].astype(theano.config.floatX), borrow=True)
+    def load(self, filename): pass
+    def save(self, filename): pass
 
-    def save(self, filename): 
-        if filename is None: return
-        np.savez_compressed(filename,
-            beta=np.array(self.beta.eval()),
-            gamma=np.array(self.gamma.eval()))
+class InverseBatchNormLayer(BatchNormLayer):
+    """Inverse of the BatchNormLayer"""
+    def __init__(self, shape, mode='low_mem'):
+        super(InverseBatchNormLayer, self).__init__(shape=shape, mode=mode)
+        self.inv, self.__call__ = self.__call__, self.inv

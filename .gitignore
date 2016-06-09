@@ -11,3 +11,9 @@ gait_classification/data
 # Python
 ###################
 *.pyc
+
+# MISC
+###################
+*.xml
+*.txt
+*~
