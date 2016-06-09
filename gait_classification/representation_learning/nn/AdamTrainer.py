@@ -27,6 +27,8 @@ class AdamTrainer(object):
         #
         # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
         if   cost == 'mse':
+            self.y_pred = lambda network, x: network(x)
+            self.error = lambda network, y_pred, y: T.zeros((1,))
             self.cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
@@ -39,6 +41,8 @@ class AdamTrainer(object):
             # classification error
             self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
         else:
+            self.y_pred = lambda network, x: network(x)
+            self.error = lambda network, y_pred, y: T.zeros((1,))
             self.cost = cost
 
     def l1_regularization(self, network, target=0.0):
@@ -63,7 +67,7 @@ class AdamTrainer(object):
         gparams = T.grad(cost, self.params)
         m0params = [self.beta1 * m0p + (1-self.beta1) *  gp     for m0p, gp in zip(self.m0params, gparams)]
         m1params = [self.beta2 * m1p + (1-self.beta2) * (gp*gp) for m1p, gp in zip(self.m1params, gparams)]
-        params = [p - (self.alpha) * 
+        params = [p - self.alpha * 
                   ((m0p/(1-(self.beta1**self.t[0]))) /
             (T.sqrt(m1p/(1-(self.beta2**self.t[0]))) + self.eps))
             for p, m0p, m1p in zip(self.params, m0params, m1params)]
@@ -148,16 +152,16 @@ class AdamTrainer(object):
             tr_errors = []
             for bii, bi in enumerate(train_batchinds):
                 tr_cost, tr_error, y_pred = train_func(bi)
-                print y_pred
+                print(y_pred)
                 tr_costs.append(tr_cost)
                 tr_errors.append(tr_error)
                 if np.isnan(tr_costs[-1]): 
-                    print 'no'
+                    print('no')
                     return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
                     sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
                     sys.stdout.flush()
-                print 'yes'
+                print('yes')
                 sys.exit()
 
             curr_tr_mean = np.mean(tr_errors)

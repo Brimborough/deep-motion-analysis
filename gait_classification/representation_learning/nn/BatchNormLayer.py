@@ -2,8 +2,6 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from theano.tensor.nnet.bn import batch_normalization
-
 class BatchNormLayer(object):
     """
     This layer implements batch normalisation, a technique presented in [1]
@@ -22,31 +20,18 @@ class BatchNormLayer(object):
            Internal Covariate Shift. http://arxiv.org/abs/1502.03167.
     """
 
-    def __init__(self, shape, mode='low_mem'):
-        # BN shift parameter, must be of same dimensionality as inputs and broadcastable against it
-        # One shift parameter for each dimension
-        self.beta = theano.shared(value = np.zeros(shape[1:], dtype=theano.config.floatX), name='beta')
-        # BN scale parameter, must be of same dimensionality as inputs and broadcastable against it
-        # One scale paramter for each dimension
-        self.gamma = theano.shared(value = np.ones(shape[1:], dtype=theano.config.floatX), name='gamma')
-
-        # 'low_mem' or 'high_mem'
-        self.mode = mode
-
+    def __init__(self, shape, axes=(0,), epsilon=1e-10):
+        self.axes = axes
+        self.shape = [s for si,s in enumerate(shape) if si not in axes]
+        self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
+        self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
+        self.epsilon = epsilon
         self.params = [self.beta, self.gamma]
         
     def __call__(self, input): 
-        bn = batch_normalization(input, self.gamma, self.beta, 
-                                 input.mean((0,), keepdims=True), 
-                                 input.std((0,), keepdims=True), 
-                                 self.mode)
-
-        # In case a batchnormalisation of scalars is attempted,
-        # the result might be a tensor of nans
-        if (T.isnan(bn.flatten(ndim=1)[0])): 
-            return input
-
-        return bn
+        mean = input.mean(self.axes, keepdims=True)
+        std = input.std(self.axes, keepdims=True) + self.epsilon
+        return (input - mean) * (self.gamma / std) + self.beta
 
     def inv(self, output): 
         return output
