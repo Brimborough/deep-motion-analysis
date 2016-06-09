@@ -44,10 +44,10 @@ class AdamTrainer(object):
     def l1_regularization(self, network, target=0.0):
         # The if term ensures we do not regularise biases
         # TODO: This will cause problems for a single output unit, fix this
-        return sum([T.mean(abs(p - target)) for p in network.params if (len(p.shape.eval()) > 1)])
+        return sum([T.mean(abs(p - target)) for p in network.params])# if (len(p.shape.eval()) > 1)])
 
     def l2_regularization(self, network, target=0.0):
-        return sum([T.mean((p - target)**2) for p in network.params if (len(p.shape.eval()) > 1)])
+        return sum([T.mean((p - target)**2) for p in network.params])# if (len(p.shape.eval()) > 1)])
         
     def get_cost_updates(self, network, input, output):
         
@@ -73,7 +73,7 @@ class AdamTrainer(object):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error)
+        return (cost, updates, error, y_pred)
         
     def train(self, network, train_input, train_output,
                              valid_input=None, valid_output=None,
@@ -92,10 +92,10 @@ class AdamTrainer(object):
         self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
         
-        cost, updates, error = self.get_cost_updates(network, input, output)
+        cost, updates, error, y_pred = self.get_cost_updates(network, input, output)
 
         train_func = theano.function(inputs=[index], 
-                                     outputs=[cost, error], 
+                                     outputs=[cost, error, y_pred], 
                                      updates=updates, 
                                      givens={input:train_input[index*self.batchsize:(index+1)*self.batchsize],
                                              output:train_output[index*self.batchsize:(index+1)*self.batchsize],}, 
@@ -147,13 +147,18 @@ class AdamTrainer(object):
             tr_costs  = []
             tr_errors = []
             for bii, bi in enumerate(train_batchinds):
-                tr_cost, tr_error = train_func(bi)
+                tr_cost, tr_error, y_pred = train_func(bi)
+                print y_pred
                 tr_costs.append(tr_cost)
                 tr_errors.append(tr_error)
-                if np.isnan(tr_costs[-1]): return
+                if np.isnan(tr_costs[-1]): 
+                    print 'no'
+                    return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
                     sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
                     sys.stdout.flush()
+                print 'yes'
+                sys.exit()
 
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
@@ -215,35 +220,29 @@ class LadderAdamTrainer(AdamTrainer):
         Advances in Neural Information Processing Systems. 2015."""
 
     def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, 
-                 supervised_l1_weight=0.0, unsupervised_l1_weight=0.0, 
-                 supervised_l2_weight=0.1, unsupervised_l2_weight=0.1, supervised_cost='cross_entropy'): 
+                 l1_weight=0.0, l2_weight=0.1, supervised_cost='cross_entropy'): 
 
         # Initialises all components needed to calulate the supervised cost of the network
         super(LadderAdamTrainer, self).__init__(rng=rng, batchsize=batchsize, epochs=epochs,
                                                 alpha=alpha, beta1=beta1, beta2=beta2, eps=eps, 
-                                                l1_weight=supervised_l1_weight, l2_weight=supervised_l2_weight, cost=supervised_cost)
+                                                l1_weight=l1_weight, l2_weight=l2_weight, cost=supervised_cost)
 
-        self.unsupervised_l1_weight = unsupervised_l1_weight
-        self.unsupervised_l2_weight = unsupervised_l2_weight
+        self.lambdas = None
         
         # Will be used to calculate the unsupervised cost
         self.mse = lambda x, y: T.mean((x - y)**2)
 
-    def unsupervised_cost(self, network, lambdas):
+    def unsupervised_cost(self, network):
         """
         Unsupervised cost is the sum of a weighted layerwise MSE.
         C = \sum_{l=0}^L \lambda_i ||\mathbf{z}^{(l)} - \hat{\mathbf{z}}^{(l)}_{\mathbf{BN}}||^2 
-
-        lambdas: Weight corresponding to the contribution of the mse for each pair of layers, given
-                 bottom-to-top, i.e. lambdas[0] is the weight of the reconstruction error for the first
-                 encoder and last decoder layer
         """
-
         layerwise_mse = 0.
         # TODO: Theano's scan?
         # As the network's reconstructions are collected during the downward pass,
         # we must iterate through the list in revese to obtain the matching pairs
-        for pair in zip(lambdas, network.clean_z, network.reconstructions):
+
+        for pair in zip(self.lambdas, network.clean_z, network.reconstructions):
             if (0.0 < pair[0]):
                 layerwise_mse += pair[0] * self.mse(pair[1], pair[2])
 
@@ -255,13 +254,14 @@ class LadderAdamTrainer(AdamTrainer):
             raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
         
         y_pred = self.y_pred(network, input)
-        # supervised cost
-        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
-                                                    self.l2_weight * self.l2_regularization(network)
+        y_pred = network.tmp
 
+        # supervised cost + regularisation
+#        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
+#                                                    self.l2_weight * self.l2_regularization(network)
         # unsupervised cost
-        cost += self.unsupervised_cost(network) + self.unsupervised_l1_weight * self.l1_regularization(network) + \
-                                                  self.unsupervised_l2_weight * self.l2_regularization(network)
+        cost = self.unsupervised_cost(network)
+
         error = None
 
         if (self.error):
@@ -281,13 +281,17 @@ class LadderAdamTrainer(AdamTrainer):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error)
+        return (cost, updates, error, y_pred)
         
-    def train(self, network, train_input, train_output,
-                             valid_input=None, valid_output=None,
-                             test_input=None, test_output=None, filename=None):
+    def train(self, network, lambdas, train_input, train_output,
+                                      valid_input=None, valid_output=None,
+                                      test_input=None, test_output=None, filename=None):
 
         """
-        Conventions: For training examples with labels, pass a one-hot vector, otherwise an array with zero values and equal dimensionality.
+        lambdas: Weight corresponding to the contribution of the mse for each pair of layers, given
+                 bottom-to-top, i.e. lambdas[0] is the weight of the reconstruction error for the first
+                 encoder and last decoder layer
         """
+
+        self.lambdas = lambdas
         super(LadderAdamTrainer, self).train(network, train_input, train_output, valid_input, valid_output, test_input, test_output, filename)

@@ -26,9 +26,9 @@ class LadderNetwork(object):
     # Noise      -> g()
     # Input       | 
     
-       References:
-           [1] Rasmus, Antti, et al. "Semi-Supervised Learning with Ladder Networks." 
-           Advances in Neural Information Processing Systems. 2015."""
+    References:
+        [1] Rasmus, Antti, et al. "Semi-Supervised Learning with Ladder Networks." 
+        Advances in Neural Information Processing Systems. 2015."""
     def __init__(self, **kw):
 
         if kw.get('encoding_layers', None) is None:
@@ -77,7 +77,7 @@ class LadderNetwork(object):
         clean_pass = self.clean_fprop(input)
 
         # Decoder part of the denoising autoencoder
-        self.inv(self.bn(noisy_pass))
+        self.inv(noisy_pass)
         # Reverse list to allow for direct comparison with clean_pass
         self.reconstructions = self.reconstructions[::-1]
 
@@ -86,12 +86,16 @@ class LadderNetwork(object):
 
     def clean_fprop(self, input):
         self.clean_z = []
+        counter = 0
         for layer in self.encoding_layers:
             if (type(layer) is GaussianNoiseLayer):
                 # Skip noise layer, add denoising target
                 self.clean_z.append(input)
             else:
                 input = layer(input)
+            if (2 == counter):
+                self.tmp = layer.tmp
+            counter += 1
 
         return input
 
@@ -135,19 +139,26 @@ class LadderNetwork(object):
         # Input       | 
 
         self.reconstructions = []
-        decoding_index = 0
+
+        # Special handling of the top layer
+        output = self.bn(output)
+        output = self.skip_connect(output, 0)
+
+        # Index to address the right parameters A used to calculate the optimal
+        # denoising function
+        decoding_index = 1
 
         # decoding
         for layer_index, d_layer in enumerate(self.decoding_layers): 
             output = d_layer.inv(output)
 
-            if (type(d_layer) is BatchNormLayer):
+            if (type(d_layer) is InverseBatchNormLayer):
                 # Apply skip connections after batchnorm layers
                 output = self.skip_connect(output, decoding_index)
                 decoding_index += 1
 
         # Final skip-connection
-        _ = self.skip_connect(output, decoding_index)
+#        _ = self.skip_connect(output, decoding_index)
 
     def skip_connect(self, input, layer_index):
         if ([] == self.noisy_z):
