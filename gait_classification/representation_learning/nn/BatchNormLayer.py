@@ -22,7 +22,7 @@ class BatchNormLayer(object):
 
     def __init__(self, shape, axes=(0,), epsilon=1e-10):
         self.axes = axes
-        self.shape = [s for si,s in enumerate(shape) if si not in axes]
+        self.shape = [(1 if si in axes else s) for si,s in enumerate(shape)]
         self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
         self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
         self.epsilon = epsilon
@@ -31,7 +31,7 @@ class BatchNormLayer(object):
     def __call__(self, input): 
         mean = input.mean(self.axes, keepdims=True)
         std = input.std(self.axes, keepdims=True) + self.epsilon
-        return (input - mean) * (self.gamma / std) + self.beta
+        return (input - mean) * T.addbroadcast((self.gamma / std) + self.beta, *self.axes)
 
     def inv(self, output): 
         return output
