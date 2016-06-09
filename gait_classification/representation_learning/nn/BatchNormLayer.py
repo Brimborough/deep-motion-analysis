@@ -36,14 +36,20 @@ class BatchNormLayer(object):
         self.params = [self.beta, self.gamma]
         
     def __call__(self, input): 
-        return batch_normalization(input, self.gamma, self.beta, 
-                                   input.mean((0,), keepdims=True), 
-                                   input.std((0,), keepdims=True), 
-                                   self.mode)
+        bn = batch_normalization(input, self.gamma, self.beta, 
+                                 input.mean((0,), keepdims=True), 
+                                 input.std((0,), keepdims=True), 
+                                 self.mode)
+
+        # In case a batchnormalisation of scalars is attempted,
+        # the result might be a tensor of nans
+        if (T.isnan(bn.flatten(ndim=1)[0])): 
+            return input
+
+        return bn
 
     def inv(self, output): 
-        # Just apply batch normalisation in the same way
-        return self.__call__(output)
+        return output
         
     def load(self, filename): pass
     def save(self, filename): pass
