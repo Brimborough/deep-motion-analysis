@@ -6,11 +6,17 @@ class ActivationLayer(object):
 
     def __init__(self, rng, f='ReLU', g=lambda x: x, params=None):
         if   f == 'ReLU':
-            self.f = T.nnet.relu
+            if hasattr(T.nnet, 'relu'):
+                self.f = T.nnet.relu
+            else:
+                self.f = lambda x: T.switch(x<0,0,x)
             self.g = lambda x: x
         elif f == 'PReLU':
             # Avoids dying ReLU units
-            self.f = lambda x: T.nnet.relu(x, alpha=0.01)
+            if hasattr(T.nnet, 'relu'):
+                self.f = lambda x: T.nnet.relu(x, alpha=0.01)
+            else:
+                self.f = lambda x: T.switch(x<=0,a*x,x)
             self.g = lambda x: x
         elif f == 'tanh':
             self.f = T.tanh

@@ -202,11 +202,11 @@ def load_data(dataset):
         n_datapoints = data_y.shape[0]
         # Convert to one_hot_labels
         # Digits 0-9: 10 classes
-        one_hot_labels  = np.zeros([n_datapoints, 10])
+        one_hot_labels = np.zeros([n_datapoints, 10])
         one_hot_labels[np.arange(n_datapoints), data_y] = 1
 
-        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=borrow)
-        shared_y = theano.shared(np.asarray(one_hot_labels, dtype=theano.config.floatX), borrow=borrow)
+#        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=borrow)
+#        shared_y = theano.shared(np.asarray(one_hot_labels, dtype=theano.config.floatX), borrow=borrow)
 
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -215,7 +215,7 @@ def load_data(dataset):
         # floats it doesn't make sense) therefore instead of returning
         # ``shared_y`` we will have to cast it to int. This little hack
         # lets ous get around this issue
-        return shared_x, T.cast(shared_y, 'int32')
+        return np.asarray(data_x, dtype=theano.config.floatX), np.asarray(one_hot_labels, dtype=theano.config.floatX) #T.cast(shared_y, 'int32')
 
     test_set_x, test_set_y = shared_dataset(test_set)
     valid_set_x, valid_set_y = shared_dataset(valid_set)
@@ -224,3 +224,24 @@ def load_data(dataset):
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
             (test_set_x, test_set_y)]
     return rval
+
+def remove_labels(rng, one_hot_labels, n_labelled_datapoints):
+    """
+    This is used to create an (artifical) semi-supervised learning environment.
+    By convention, unlabelled data is marked as a vector of zeros in lieu of a one-hot-vector
+    """
+
+    n_datapoints = one_hot_labels.shape[0]
+    label_flags = np.arange(n_datapoints)
+
+    rng.shuffle(label_flags)
+
+    # Randomnly remove labels to create a semi-supervised setting
+    unlabelled_points = label_flags[0:n_datapoints-n_labelled_datapoints].reshape(n_datapoints-n_labelled_datapoints, 1)
+
+    # Remove labels
+    one_hot_labels[unlabelled_points] = 0
+
+    assert np.sum(np.sum(one_hot_labels, axis=0)) == n_labelled_datapoints
+
+    return one_hot_labels
