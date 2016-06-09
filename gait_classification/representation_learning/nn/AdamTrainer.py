@@ -20,6 +20,8 @@ class AdamTrainer:
         self.epochs = epochs
         self.batchsize = batchsize
         if   cost == 'mse':
+            self.y_pred = lambda network, x: network(x)
+            self.error = lambda network, y_pred, y: T.zeros((1,))
             self.cost = lambda network, x, y: T.mean((network(x) - y)**2)
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
@@ -30,6 +32,8 @@ class AdamTrainer:
             self.error = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), y))
             self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred, y).mean()
         else:
+            self.y_pred = lambda network, x: network(x)
+            self.error = lambda network, y_pred, y: T.zeros((1,))
             self.cost = cost
         
     def regularization(self, network, target=0.0):
@@ -48,7 +52,7 @@ class AdamTrainer:
         gparams = T.grad(cost, self.params)
         m0params = [self.beta1 * m0p + (1-self.beta1) *  gp     for m0p, gp in zip(self.m0params, gparams)]
         m1params = [self.beta2 * m1p + (1-self.beta2) * (gp*gp) for m1p, gp in zip(self.m1params, gparams)]
-        params = [p - (self.alpha / self.batchsize) * 
+        params = [p - self.alpha * 
                   ((m0p/(1-(self.beta1**self.t[0]))) /
             (T.sqrt(m1p/(1-(self.beta2**self.t[0]))) + self.eps))
             for p, m0p, m1p in zip(self.params, m0params, m1params)]
