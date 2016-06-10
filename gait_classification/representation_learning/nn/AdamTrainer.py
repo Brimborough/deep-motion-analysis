@@ -33,13 +33,13 @@ class AdamTrainer(object):
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-            # classification error
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
+            # classification error (taking into account only training examples with labels)
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
         elif cost == 'cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-            # classification error
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
+            # classification error (taking into account only training examples with labels)
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
         else:
             self.y_pred = lambda network, x: network(x)
             self.error = lambda network, y_pred, y: T.zeros((1,))
@@ -152,8 +152,12 @@ class AdamTrainer(object):
             tr_errors = []
             for bii, bi in enumerate(train_batchinds):
                 tr_cost, tr_error = train_func(bi)
+
+                # tr_error might be nan for a batch without labels in semi-supervised learning
+                if not np.isnan(tr_error):
+                    tr_errors.append(tr_error)
+
                 tr_costs.append(tr_cost)
-                tr_errors.append(tr_error)
                 if np.isnan(tr_costs[-1]): 
                     return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
@@ -256,10 +260,10 @@ class LadderAdamTrainer(AdamTrainer):
         y_pred = self.y_pred(network, input)
 
         # supervised cost + regularisation
-#        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
-#                                                    self.l2_weight * self.l2_regularization(network)
+        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
+                                                    self.l2_weight * self.l2_regularization(network)
         # unsupervised cost
-        cost = self.unsupervised_cost(network)
+        cost += self.unsupervised_cost(network)
 
         error = None
 
