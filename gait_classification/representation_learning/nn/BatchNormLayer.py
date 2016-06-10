@@ -41,6 +41,6 @@ class BatchNormLayer(object):
 
 class InverseBatchNormLayer(BatchNormLayer):
     """Inverse of the BatchNormLayer"""
-    def __init__(self, shape, mode='low_mem'):
-        super(InverseBatchNormLayer, self).__init__(shape=shape, mode=mode)
+    def __init__(self, shape):
+        super(InverseBatchNormLayer, self).__init__(shape=shape)
         self.inv, self.__call__ = self.__call__, self.inv
