@@ -77,7 +77,7 @@ class AdamTrainer(object):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error, y_pred)
+        return (cost, updates, error)
         
     def train(self, network, train_input, train_output,
                              valid_input=None, valid_output=None,
@@ -96,10 +96,10 @@ class AdamTrainer(object):
         self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
         
-        cost, updates, error, y_pred = self.get_cost_updates(network, input, output)
+        cost, updates, error = self.get_cost_updates(network, input, output)
 
         train_func = theano.function(inputs=[index], 
-                                     outputs=[cost, error, y_pred], 
+                                     outputs=[cost, error], 
                                      updates=updates, 
                                      givens={input:train_input[index*self.batchsize:(index+1)*self.batchsize],
                                              output:train_output[index*self.batchsize:(index+1)*self.batchsize],}, 
@@ -151,18 +151,14 @@ class AdamTrainer(object):
             tr_costs  = []
             tr_errors = []
             for bii, bi in enumerate(train_batchinds):
-                tr_cost, tr_error, y_pred = train_func(bi)
-                print(y_pred)
+                tr_cost, tr_error = train_func(bi)
                 tr_costs.append(tr_cost)
                 tr_errors.append(tr_error)
                 if np.isnan(tr_costs[-1]): 
-                    print('no')
                     return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
                     sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
                     sys.stdout.flush()
-                print('yes')
-                sys.exit()
 
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
@@ -258,7 +254,6 @@ class LadderAdamTrainer(AdamTrainer):
             raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
         
         y_pred = self.y_pred(network, input)
-        y_pred = network.tmp
 
         # supervised cost + regularisation
 #        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
@@ -285,7 +280,7 @@ class LadderAdamTrainer(AdamTrainer):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error, y_pred)
+        return (cost, updates, error)
         
     def train(self, network, lambdas, train_input, train_output,
                                       valid_input=None, valid_output=None,
