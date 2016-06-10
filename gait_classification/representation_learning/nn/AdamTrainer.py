@@ -33,13 +33,13 @@ class AdamTrainer(object):
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-            # classification error
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
+            # classification error (taking into account only training examples with labels)
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
         elif cost == 'cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-            # classification error
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1), T.argmax(y, axis=1)))
+            # classification error (taking into account only training examples with labels)
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
         else:
             self.y_pred = lambda network, x: network(x)
             self.error = lambda network, y_pred, y: T.zeros((1,))
@@ -77,7 +77,7 @@ class AdamTrainer(object):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error, y_pred)
+        return (cost, updates, error)
         
     def train(self, network, train_input, train_output,
                              valid_input=None, valid_output=None,
@@ -96,10 +96,10 @@ class AdamTrainer(object):
         self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
         
-        cost, updates, error, y_pred = self.get_cost_updates(network, input, output)
+        cost, updates, error = self.get_cost_updates(network, input, output)
 
         train_func = theano.function(inputs=[index], 
-                                     outputs=[cost, error, y_pred], 
+                                     outputs=[cost, error], 
                                      updates=updates, 
                                      givens={input:train_input[index*self.batchsize:(index+1)*self.batchsize],
                                              output:train_output[index*self.batchsize:(index+1)*self.batchsize],}, 
@@ -151,18 +151,18 @@ class AdamTrainer(object):
             tr_costs  = []
             tr_errors = []
             for bii, bi in enumerate(train_batchinds):
-                tr_cost, tr_error, y_pred = train_func(bi)
-                print(y_pred)
+                tr_cost, tr_error = train_func(bi)
+
+                # tr_error might be nan for a batch without labels in semi-supervised learning
+                if not np.isnan(tr_error):
+                    tr_errors.append(tr_error)
+
                 tr_costs.append(tr_cost)
-                tr_errors.append(tr_error)
                 if np.isnan(tr_costs[-1]): 
-                    print('no')
                     return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
                     sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
                     sys.stdout.flush()
-                print('yes')
-                sys.exit()
 
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
@@ -258,13 +258,12 @@ class LadderAdamTrainer(AdamTrainer):
             raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
         
         y_pred = self.y_pred(network, input)
-        y_pred = network.tmp
 
         # supervised cost + regularisation
-#        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
-#                                                    self.l2_weight * self.l2_regularization(network)
+        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
+                                                    self.l2_weight * self.l2_regularization(network)
         # unsupervised cost
-        cost = self.unsupervised_cost(network)
+        cost += self.unsupervised_cost(network)
 
         error = None
 
@@ -285,7 +284,7 @@ class LadderAdamTrainer(AdamTrainer):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error, y_pred)
+        return (cost, updates, error)
         
     def train(self, network, lambdas, train_input, train_output,
                                       valid_input=None, valid_output=None,
