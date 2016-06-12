@@ -6,7 +6,7 @@ import theano.tensor as T
 
 from theano.tensor.shared_randomstreams import RandomStreams
 from datetime import datetime
-from LadderNetwork import LadderNetwork
+#from LadderNetwork import LadderNetwork
 
 class AdamTrainer(object):
     
@@ -22,6 +22,12 @@ class AdamTrainer(object):
         self.epochs = epochs
         self.batchsize = batchsize
 
+        # To split between labeld & unlabeled examples
+        labeled   = lambda X, Y: X[T.nonzero(Y)[0]]
+        unlabeled = lambda X, Y: X[T.nonzero(1.-T.sum(Y, axis=1))]
+        # Classification predictions
+        pred      = lambda Y: T.argmax(Y, axis=1)
+
         # Where cost is always the cost which is minimised in supervised training
         # the T.nonzero term ensures that the cost is only calculated for examples with a label
         #
@@ -34,12 +40,14 @@ class AdamTrainer(object):
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
             # classification error (taking into account only training examples with labels)
+#            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
             self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
         elif cost == 'cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
             # classification error (taking into account only training examples with labels)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
+#            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         else:
             self.y_pred = lambda network, x: network(x)
             self.error = lambda network, y_pred, y: T.zeros((1,))
@@ -256,12 +264,14 @@ class LadderAdamTrainer(AdamTrainer):
 
         if (type(network) is not LadderNetwork):
             raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
-        
-        y_pred = self.y_pred(network, input)
+
+        # predict with the clean version, calculate supervised cost with the noisy version
+        coding_dist = network(input, output)
+        y_pred      = network.predictions
 
         # supervised cost + regularisation
-        cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
-                                                    self.l2_weight * self.l2_regularization(network)
+        cost = self.cost(network, coding_dist, output) + self.l1_weight * self.l1_regularization(network) + \
+                                                         self.l2_weight * self.l2_regularization(network)
         # unsupervised cost
         cost += self.unsupervised_cost(network)
 
