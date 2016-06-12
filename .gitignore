@@ -7,7 +7,7 @@
 ###################
 gait_classification/models
 gait_classification/data
-gait_classification/LSTM_TryOuts
+gait_classification/mess
 
 # Python
 ###################
