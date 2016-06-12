@@ -1,4 +1,4 @@
-# deep-motion-analysis
+# Theano Code for Motion Analysis
 
 
 ## Documentation
