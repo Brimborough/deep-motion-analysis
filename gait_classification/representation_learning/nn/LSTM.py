@@ -1,6 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
+from BatchNormLayer import BatchNormLayer
 from theano.compat.python2x import OrderedDict
 from theano.tensor.shared_randomstreams import RandomStreams
 
@@ -47,7 +48,7 @@ def ortho_weight(ndim):
 def param_init_lstm(options, params, prefix='lstm'):
     """
     Init the LSTM parameter:
-
+        - Look into
     :see: init_params
     """
 
@@ -78,18 +79,34 @@ def init_params(params):
 
 class LSTM(object):
 
+    '''
+        TODO:
+         - Stacked should just work, but might need another layer..
+         - Xavier init - W = [input, hidden] U = [hidden,hidden] b = [hidden]
+         - Mini-batches, check matrix multiplications and shapes of BNs
+         - Add possibility of peepholes?
+    '''
+    def __init__(self, options, shape, rng, drop=0, zone_hidden=0, zone_cell=0, prefix="lstm",
+                 bn=False, clip_gradients=False, mask=None):
 
-    def __init__(self, shape, options,rng,drop = 0, zone = 0, batch_size = 1, prefix="lstm", clip_gradients=False, mask=None):
         self.nsteps = shape
-        self.n_samples = shape
-        self.mask = mask
-        self.clip_gradients = clip_gradients
-        self.params = init_params(param_init_lstm(options=options, prefix=prefix))
+        self.mask = mask if mask is None else '' #TODO: Make mask
+        self.prefix = prefix
+        #TODO: Replace options and update the step function
         self.options = options
-        self.Dropout = drop
-        self.Zoneout = zone
+        self.clip_gradients = clip_gradients
+        self.params = init_params(param_init_lstm(options=options, params=[], prefix=prefix))
+        #TODO: Sort shapes, can have input,hidden for W, U = hidden,hidden, b = hidden
+        # Saves upon changing code lots below.
+        self.bninput = BatchNormLayer(None, shape) if bn else lambda x: x
+        self.bnhidden = BatchNormLayer(None, shape) if bn else lambda x: x
+        self.bncell = BatchNormLayer(None, shape) if bn else lambda x: x
+        # Add BN params to layer (for SGD)
+        if bn:
+            self.params += self.bnhidden.params + self.bninput.params + self.bncell.params
+        self.dropout = drop
+        self.zoneout = {'h': zone_hidden, 'c': zone_cell}
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
-        # No need to create the hidden and memory cells, used through recursion.
 
     def __call__(self, input):
 
@@ -97,46 +114,78 @@ class LSTM(object):
         if self.clip_gradients is not False:
             input = clip_gradient(input, self.clip_gradients)
 
-            # Helper coder to split
-            def _slice(_x, n, dim):
-                if _x.ndim == 3:
-                    return _x[:, :, n * dim:(n + 1) * dim]
-                return _x[:, n * dim:(n + 1) * dim]
+        # Helper coder to split
+        def _slice(_x, n, dim):
+            if _x.ndim == 3:
+                return _x[:, :, n * dim:(n + 1) * dim]
+            return _x[:, n * dim:(n + 1) * dim]
 
-            # Step function for each part of the project
-            # TODO: zoneout
-            def _step(m_, x_, h_, c_):
-                # Initial dot product saving on computation
-                preact = T.dot(h_, self.params[_pN(self.prefix, 'U')])
-                # Add
-                preact += x_
+        '''
+            Step function for each part of the project
+            Order of params: Sequences, Returned Values, Non-sequence data
 
-                i = T.nnet.sigmoid(_slice(preact, 0, self.options['dim_proj']))
-                f = T.nnet.sigmoid(_slice(preact, 1, self.options['dim_proj']))
-                o = T.nnet.sigmoid(_slice(preact, 2, self.options['dim_proj']))
-                c = T.tanh(_slice(preact, 3, self.options['dim_proj']))
-                if self.Dropout > 0:
-                    '''
-                        Implemented dropout like:
-                        @author Stanislau Semeniuta et al.
-                        @paper https://arxiv.org/pdf/1603.05118.pdf
-                        @year 2016
-                    '''
-                    d = (i * c * self.theano_rng.binomial(
-                        size=x_.shape, n=1, p=(1 - self.Dropout),
-                        dtype=theano.config.floatX))
-                    c = f * c_ + d
-                else:
-                    c = f * c_ + i * c
+            Implemented BN for LSTM like:
+            @author Tim Cooijmans et al.
+            @paper https://arxiv.org/pdf/1603.09025.pdf
+            @year 2016
 
-                #Multiply by mask for different size inputs
-                c = m_[:, None] * c + (1. - m_)[:, None] * c_
-                h = o * T.tanh(c)
-                h = m_[:, None] * h + (1. - m_)[:, None] * h_
-                # RECURSIVE SO THESE WILL GET PASSED THROUGH
-                return h, c
-        # Perform the actions.
-        self.rval, self.updates = theano.scan(_step,
+            Implemented dropout like:
+            @author Stanislau Semeniuta et al.
+            @paper https://arxiv.org/pdf/1603.05118.pdf
+            @year 2016
+
+            Implemented zoneout like:
+            @author David Krueger et al.
+            @paper http://arxiv.org/abs/1606.01305.pdf
+            @year 2016
+
+        '''
+        def _step(m_, x_, h_, c_, dropout, zoneout, rng, prefix, bnh, bnc):
+            # Initial dot product saving on computation
+            preact = bnh(T.dot(h_, self.params[_pN(prefix, 'U')]))
+            preact += x_
+
+            i = T.nnet.sigmoid(_slice(preact, 0, self.options['dim_proj']))
+            f = T.nnet.sigmoid(_slice(preact, 1, self.options['dim_proj']))
+            o = T.nnet.sigmoid(_slice(preact, 2, self.options['dim_proj']))
+            c = T.tanh(_slice(preact, 3, self.options['dim_proj']))
+            if dropout > 0:
+                d = (i * c * rng.binomial(
+                    size=x_.shape, n=1, p=(1 - dropout),
+                    dtype=theano.config.floatX))
+                c = f * c_ + d
+            # No reg..
+            elif zoneout['c'] > 0:
+                d = rng.binomial(
+                    size=x_.shape, n=1, p=(1 - zoneout['c']),
+                    dtype=theano.config.floatX)
+                c = (d * c_) + ((1-d) * (f * c_ + i * c))
+            else:
+                c = f * c_ + i * c
+
+            # Multiply by mask for different size inputs
+            c = m_[:, None] * c + (1. - m_)[:, None] * c_
+
+            if zoneout['h'] > 0:
+                d = rng.binomial(
+                    size=x_.shape, n=1, p=(1 - zoneout['h']),
+                    dtype=theano.config.floatX)
+                h = (h_*d) + ((1-d) * (o * T.tanh(bnc(c))))
+
+            h = m_[:, None] * h + (1. - m_)[:, None] * h_
+            # These get passed in the middle due to recursion. (IDK why in the middle)
+
+            return h, c
+
+        # Initial transform.
+        input = (self.bninput(T.dot(input, self.params[_pN(self.prefix, 'W')])) +
+                       self.params[_pN(self.prefix, 'b')])
+
+
+        #TODO: Add n_samples which is the batch size!
+
+        # Perform the actions - lots of non_sequences (hoping they save on overhead transfers but unsure...)
+        hidden_outputs, updates = theano.scan(_step,
                                               sequences=[self.mask, input],
                                               outputs_info=[T.alloc(np.asarray((0.), dtype=T.config.floatX),
                                                                     self.n_samples,
@@ -144,15 +193,12 @@ class LSTM(object):
                                                             T.alloc(np.asarray((0.), dtype=T.config.floatX),
                                                                     self.n_samples,
                                                                     self.options['dim_proj'])],
+                                              non_sequences=[self.dropout, self.zoneout,
+                                                             self.theano_rng, self.prefix,
+                                                             self.bnhidden, self.bncell],
                                               name=_pN(self.prefix, '_layers'),
                                               n_steps=self.nsteps)
 
 
-        # Can get output by doing something with rval[0]
-
-        #How to return the output here????
-        return input + self.b.dimshuffle('x', 0, 'x', 'x')
-
-    #TODO: implement outputs
-    #TODO: implement zoneout!
-    #TODO: implement stacked
+        # outputs = hiddens.
+        return hidden_outputs
