@@ -1,6 +1,7 @@
 import numpy as np
 import theano
 import pprint
+from theano.compat.python2x import OrderedDict
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 
@@ -17,12 +18,4 @@ print T.dot(x,y).eval()
 
 '''
 
-r = np.random.RandomState(23455)
-class t(object):
-    def __init__(self, mask=None):
-        self.mask = 'yes' if mask is None else mask
-
-        print self.mask
-
-t()
-
+# Test how outcome of vector dot matrix
