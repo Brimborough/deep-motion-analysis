@@ -90,22 +90,59 @@ def unzip(zipped):
 
 class LSTM(object):
 
-    '''
-        TODO:
+    """ TODO:
          - Mini-batches, check matrix multiplications and shapes of BNs
          - Masks
          - Add options for BN, then do if not None, that way we can solve them
          - Make self.params a func, less heavy on memory?
          - Toy tests of scan and backprop.
+    """
 
-         :param bn
-         :value options in the form of input_,hidden_,cell_, axes or epsilon, in a dict.
-    '''
     def __init__(self, input_shape, hidden_shape, rng, batch_size=1, drop=0, zone_hidden=0, zone_cell=0, prefix="lstm",
                  bn=None, clip_gradients=False, mask=None, backwards=False, return_seq=False):
-
         '''
-            Function to create Batch Norm layers, or returns empty functions
+            Initilisation method, with lots of parameters because it is a small network in itself.
+
+            :param input_shape: The shape for which the 1st dimension of the input weights will take.
+            :type input_shape: int
+
+            :param hidden_shape: The shape the rest of the weights will take.
+            :type hidden_shape: int
+
+            :param rng: a random number generator used to initialize weights
+            :type rng: numpy.random.RandomState
+
+            :param batch_size: The number of instances in a mini-batch
+            :type batch_size: int
+
+            :param drop: The dropout rate
+            :type drop: float
+
+            :param zone_cell: The zone-out rate for the memory cell
+            :type zone_cell: float
+
+            :param zone_hidden: The zone-out rate for the hidden inputs
+            :type zone_hidden: float
+
+            :param prefix: The prefix for which to fix to weights in the ordered dict
+            :type prefix: string
+
+            :param bn: The dictionary of set able options, i.e. epsilon for the batch norm layers.
+                        In the form of layer_option, with layer being input, hidden or cell.
+                        { layer_axes: type of list, layer_epsilon: float}
+            :type bn: dictionary
+
+            :param clip_gradients: To clip gradients
+            :type clip_gradients: float
+
+            :param mask: Mask for which to pad the inputs with (all ones in all same length)
+            :type mask: Matrix conforming to {batchsize,max_seq}
+
+            :param backwards: For reversing the LSTM to make the backward part of a LSTM
+            :type backwards: Bool
+
+            :param return_seq: Return a sequence or just the final output
+            :type return_seq: Bool
         '''
 
         def createBN(bn, batch_size, input_shape, hidden_shape):
@@ -285,7 +322,7 @@ class LSTM(object):
         return output
 
     def load(self, filename):
-        if filename is None: return
+        if filename is None: pass
         if not filename.endswith('.npz'): filename += '.npz'
         #Ensures all the expected params are there, dummy create
         params = param_init_lstm(1, 1, {}, np.random.RandomState(23455))
@@ -304,7 +341,7 @@ class LSTM(object):
             self.bnhidden.load(fn + 'hidden')
 
     def save(self, filename):
-        if filename is None: return
+        if filename is None: pass
         params = unzip(self.shared_params)
         np.savez_compressed('filename', **params)
         # Save the params in the batch norm layer.
