@@ -36,6 +36,10 @@ E = theano.shared(X, borrow=True)
     # 'layer_2.npz', None, None,
 # ])
 
+
+def cost(network, X, Y):
+    return T.mean((network(X) - Y)**2)
+
 trainer = AdamTrainer(rng, batchsize=1, epochs=25, alpha=0.00001)
 trainer.train(AutoEncodingNetwork(network), E, E, [
     None,

@@ -34,7 +34,7 @@ class BatchNormLayer(object):
         mean = input.mean(self.axes, keepdims=True) 
         std = input.std(self.axes, keepdims=True) + self.epsilon 
 
-        # Don't batchnoramlise a single data point
+        # Don't batch normalise a single data point
         mean = ifelse(T.gt(input.shape[0], 1), mean, T.zeros(mean.shape, dtype=mean.dtype))
         std  = ifelse(T.gt(input.shape[0], 1), std, T.ones(std.shape, dtype=std.dtype))
 
@@ -42,9 +42,24 @@ class BatchNormLayer(object):
 
     def inv(self, output): 
         return output
-        
-    def load(self, filename): pass
-    def save(self, filename): pass
+
+    '''
+        Save extra parameters for loading of the layer within other layers, i.e. the LSTM
+    '''
+    def load(self, filename):
+        if filename is None: return
+        if not filename.endswith('.npz'): filename += '.npz'
+        data = np.load(filename)
+        self.gamma = theano.shared(value=data['gamma'].astype(theano.config.floatX), name='gamma')
+        self.beta = theano.shared(value=data['beta'].astype(theano.config.floatX), name='beta')
+        self.params = [self.gamma, self.beta]
+
+    def save(self, filename):
+        if filename is None: return
+        np.savez_compressed(filename,
+                            gamma=np.array(self.gamma.eval()),
+                            beta=np.array(self.beta.eval()))
+
 
 class InverseBatchNormLayer(BatchNormLayer):
     """Inverse of the BatchNormLayer"""
