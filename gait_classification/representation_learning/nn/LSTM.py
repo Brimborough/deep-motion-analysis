@@ -11,33 +11,6 @@ dtype=theano.config.floatX
 def _pN(param, layer_name):
     return '%s_%s' % (param, layer_name)
 
-
-class GradClip(theano.compile.ViewOp):
-    """
-    Here we clip the gradients as Alex Graves does in his
-    recurrent neural networks. In particular this prevents
-    explosion of gradients during backpropagation.
-    The original poster of this code was Alex Lamb,
-    [here](https://groups.google.com/forum/#!topic/theano-dev/GaJwGw6emK0).
-    """
-
-    def __init__(self, clip_lower_bound, clip_upper_bound):
-        self.clip_lower_bound = clip_lower_bound
-        self.clip_upper_bound = clip_upper_bound
-        assert(self.clip_upper_bound >= self.clip_lower_bound)
-
-    def grad(self, args, g_outs):
-        return [T.clip(g_out, self.clip_lower_bound, self.clip_upper_bound) for g_out in g_outs]
-
-
-def clip_gradient(x, bound):
-    grad_clip = GradClip(-bound, bound)
-    try:
-        T.opt.register_canonicalize(theano.gof.OpRemove(grad_clip), name='grad_clip_%.1f' % (bound))
-    except ValueError:
-        pass
-    return grad_clip(x)
-
 # Change this to Xavier init
 def xavier_weight(in_dim, out_dim, rng):
     W_bound = np.sqrt(6. / (in_dim + out_dim))
@@ -72,11 +45,19 @@ def param_init_lstm(input, hidden, params, rng, prefix='lstm'):
     return params
 
 # Creates shared variables in order
-def init_params(params):
+def init_params(params, clip_gradients):
     tparams = OrderedDict()
     for kk, pp in params.items():
         tparams[kk] = theano.shared(params[kk], name=kk)
-    return tparams
+    # Extra node to allow for clipping of params, which ensures the params are clipped in comp graph.
+    # Do it here so when we re-load params it's ok.
+    clipped = OrderedDict()
+    if clip_gradients:
+        for k, p in tparams.items():
+            clipped[k] = theano.gradient.grad_clip(tparams[k], -clip_gradients, clip_gradients)
+    else:
+        clipped = tparams
+    return tparams, clipped
 
 # Used for getting latest theano variables and saving them.
 def unzip(zipped):
@@ -188,12 +169,13 @@ class LSTM(object):
         self.return_seq = return_seq #Return sequences
         self.mask = mask if mask is None else '' #TODO: Ensure people make masks....
         self.prefix = prefix
+        self.clip_gradients = clip_gradients
         self.batch_size = batch_size
         self.input_shape = input_shape
         self.bn = bn
         self.hidden_shape = hidden_shape
-        self.clip_gradients = clip_gradients
-        self.shared_params = init_params(param_init_lstm(input_shape, hidden_shape, {}, rng, prefix=prefix))
+        self.shared_params, self.clipped_params = \
+            init_params(param_init_lstm(input_shape, hidden_shape, {}, rng, prefix=prefix), clip_gradients)
 
         # Shapes, can have input,hidden for W, U = hidden,hidden, b = hidden
         # Use function to allow for the options to be set, makes saving and loading easier.
@@ -209,7 +191,6 @@ class LSTM(object):
     '''
         thoughts: - should we swap axes if coming from a conv?
         - shape for BN
-
     '''
     def __call__(self, input):
 
@@ -218,10 +199,6 @@ class LSTM(object):
         # For BLSTM
         if self.backwards:
             input = input[::-1]
-
-        # Clip grads here since we will use the same input later on everywhere.
-        if self.clip_gradients is not False:
-            input = clip_gradient(input, self.clip_gradients)
 
         # Helper coder to split
         def _slice(_x, n, dim):
@@ -249,9 +226,9 @@ class LSTM(object):
             @year 2016
 
         '''
-        def _step(m_, x_, h_, c_, dropout, zoneout, rng, prefix, bnh, bnc,):
+        def _step(m_, x_, h_, c_, dropout, zoneout, rng, prefix, bnh, bnc, clipped):
             # Initial dot product saving on computation
-            preact = bnh(T.dot(h_, self.shared_params[_pN(prefix, 'U')]))
+            preact = bnh(T.dot(h_, clipped[_pN(prefix, 'U')]))
             preact += x_
 
             i = T.nnet.sigmoid(_slice(preact, 0, h_.shape[1]))  # Should be the size of the hidden nodes, hence shape[1]
@@ -289,8 +266,8 @@ class LSTM(object):
             return h, c
 
         # Initial transform.
-        input = (self.bninput(T.dot(input, self.shared_params[_pN(self.prefix, 'W')])) +
-                 self.shared_params[_pN(self.prefix, 'b')])
+        input = (self.bninput(T.dot(input, self.clipped_params[_pN(self.prefix, 'W')])) +
+                 self.clipped_params[_pN(self.prefix, 'b')])
 
 
         # Perform the actions - lots of non_sequences (hoping they save on overhead transfers but unsure...)
@@ -304,7 +281,8 @@ class LSTM(object):
                                                                     self.hidden_shape)],
                                               non_sequences=[self.dropout, self.zoneout,
                                                              self.theano_rng, self.prefix,
-                                                             self.bnhidden, self.bncell],
+                                                             self.bnhidden, self.bncell,
+                                                             self.clipped_params],
                                               name=_pN(self.prefix, '_layers'),
                                               n_steps=n_steps)
 
@@ -332,7 +310,7 @@ class LSTM(object):
                 raise Warning('%s is not in the archive' % kk)
             params[kk] = pp[kk]
         #Make shared variables again
-        init_params(params)
+        init_params(params, self.clip_gradients)
         # load the params into the sub layers
         if self.bn:
             fn = filename + 'BN'
