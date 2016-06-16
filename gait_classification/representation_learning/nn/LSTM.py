@@ -22,20 +22,21 @@ def xavier_weight(in_dim, out_dim, rng):
 #Alter this.
 def param_init_lstm(input, hidden, params, rng, prefix='lstm'):
     """
-    Init the LSTM parameter
+    Init the LSTM parameter, multiply some by 4 due to results presented in [Xavier10] suggest that you
+                should use 4 times larger initial weights for sigmoid compared to tanh.
     :see: init_params
     """
 
     # Weight matrix for multiplying with input
-    W = np.concatenate([xavier_weight(input, hidden, rng),
-                        xavier_weight(input, hidden, rng),
-                        xavier_weight(input, hidden, rng),
+    W = np.concatenate([4*xavier_weight(input, hidden, rng),
+                        4*xavier_weight(input, hidden, rng),
+                        4*xavier_weight(input, hidden, rng),
                         xavier_weight(input, hidden, rng)], axis=1)
     params[_pN(prefix, 'W')] = W
     # Weight matrix for multiplying with hidden activations
-    U = np.concatenate([xavier_weight(hidden, hidden, rng),
-                        xavier_weight(hidden, hidden, rng),
-                        xavier_weight(hidden, hidden, rng),
+    U = np.concatenate([4*xavier_weight(hidden, hidden, rng),
+                        4*xavier_weight(hidden, hidden, rng),
+                        4*xavier_weight(hidden, hidden, rng),
                         xavier_weight(hidden, hidden, rng)], axis=1)
     params[_pN(prefix, 'U')] = U
     # 4 Bias since we will use matrix multiplication to make it a lot nicer.
@@ -80,7 +81,7 @@ class LSTM(object):
     """
 
     def __init__(self, input_shape, hidden_shape, rng, batch_size=1, drop=0, zone_hidden=0, zone_cell=0, prefix="lstm",
-                 bn=None, clip_gradients=False, mask=None, backwards=False, return_seq=False):
+                 bn=None, clip_gradients=False, mask=None, backwards=False, return_seq=False, truncated=-1):
         '''
             Initilisation method, with lots of parameters because it is a small network in itself.
 
@@ -122,8 +123,11 @@ class LSTM(object):
             :param backwards: For reversing the LSTM to make the backward part of a LSTM
             :type backwards: Bool
 
-            :param return_seq: Return a sequence or just the final output
+            :param return_seq: Determines whether we return a sequence or just the final output
             :type return_seq: Bool
+
+            :param truncated: A value for the truncated_gradients in the scan function
+            :type truncated: signed int
         '''
 
         def createBN(bn, batch_size, input_shape, hidden_shape):
@@ -169,6 +173,7 @@ class LSTM(object):
         self.return_seq = return_seq #Return sequences
         self.mask = mask if mask is None else '' #TODO: Ensure people make masks....
         self.prefix = prefix
+        self.truncated = truncated
         self.clip_gradients = clip_gradients
         self.batch_size = batch_size
         self.input_shape = input_shape
@@ -284,7 +289,8 @@ class LSTM(object):
                                                              self.bnhidden, self.bncell,
                                                              self.clipped_params],
                                               name=_pN(self.prefix, '_layers'),
-                                              n_steps=n_steps)
+                                              n_steps=n_steps,
+                                              truncate_gradient=self.truncated)
 
         # For BLSTM
         if self.backwards:
