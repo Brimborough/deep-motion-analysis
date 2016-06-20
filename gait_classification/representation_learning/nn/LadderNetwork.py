@@ -5,6 +5,8 @@ import theano.tensor as T
 
 from BatchNormLayer import BatchNormLayer, InverseBatchNormLayer
 from NoiseLayer import GaussianNoiseLayer
+from HiddenLayer import HiddenLayer
+from theano.ifelse import ifelse
 
 class LadderNetwork(object):
     """Implementation of the LadderNetwork as intoroduced in [1].
@@ -67,8 +69,8 @@ class LadderNetwork(object):
         self.params += self.As
 
         # Used to batch-normalise before running the decoder
-        self.bn = BatchNormLayer((1, n_units[0]))
-        self.params += self.bn.params
+#        self.bn = BatchNormLayer((1, n_units[0]))
+#        self.params += self.bn.params
 
     def __call__(self, input):
         # Encoder part of the denoising autoencoder
@@ -86,16 +88,12 @@ class LadderNetwork(object):
 
     def clean_fprop(self, input):
         self.clean_z = []
-        counter = 0
         for layer in self.encoding_layers:
             if (type(layer) is GaussianNoiseLayer):
                 # Skip noise layer, add denoising target
                 self.clean_z.append(input)
             else:
                 input = layer(input)
-            if (2 == counter):
-                self.tmp = layer.tmp
-            counter += 1
 
         return input
 
@@ -141,7 +139,7 @@ class LadderNetwork(object):
         self.reconstructions = []
 
         # Special handling of the top layer
-        output = self.bn(output)
+#        output = self.bn(output)
         output = self.skip_connect(output, 0)
 
         # Index to address the right parameters A used to calculate the optimal
@@ -152,7 +150,8 @@ class LadderNetwork(object):
         for layer_index, d_layer in enumerate(self.decoding_layers): 
             output = d_layer.inv(output)
 
-            if (type(d_layer) is InverseBatchNormLayer):
+#            if (type(d_layer) is InverseBatchNormLayer):
+            if (type(d_layer) is HiddenLayer):
                 # Apply skip connections after batchnorm layers
                 output = self.skip_connect(output, decoding_index)
                 decoding_index += 1
@@ -169,8 +168,17 @@ class LadderNetwork(object):
 
         reconstruction = (self.noisy_z[-1] - MU) * V + MU
 
-        # Non-trainable BN
-        reconstruction = (reconstruction - reconstruction.mean(0)) / reconstruction.std(0) 
+#        # Non trainable Batchnormalisation
+#        mean = reconstruction.mean(0)
+#        std  = reconstruction.std(0) + 1e-10
+#
+#        # Only batchnormalise for a batchsize > 1
+#        mean = ifelse(T.gt(input.shape[0], 1), mean, T.zeros(mean.shape, dtype=mean.dtype))
+#        std  = ifelse(T.gt(input.shape[0], 1), std, T.ones(std.shape, dtype=std.dtype))
+
+#        reconstruction = (reconstruction - mean) / std
+        self.tmp = reconstruction
+
         # To caluclate the reconstruction error later
         self.reconstructions.append(reconstruction)
         self.noisy_z = self.noisy_z[0:-1]
