@@ -21,7 +21,7 @@ train_set_x, train_set_y = datasets[0]
 train_set_x = shared(train_set_x)
 
 # Create a semi-supervised task by removing all but a hundred labels
-train_set_y = remove_labels(rng, train_set_y, 100)
+train_set_y = remove_labels(rng, train_set_y, train_set_y.shape[0] - 100)
 train_set_y = shared(train_set_y)
 
 valid_set_x, valid_set_y = map(shared, datasets[1])
@@ -50,9 +50,9 @@ network = LadderNetwork(
         sigma=sigma
 )
 
-# Weights for the layer-wise unsupervised cost, as found in [1] given bottom-to-top, 
-# i.e. lambdas[0] is the weight of the reconstruction error for the first
-# encoder and last decoder layer
+ Weights for the layer-wise unsupervised cost, as found in [1] given bottom-to-top,
+ i.e. lambdas[0] is the weight of the reconstruction error for the first
+ encoder and last decoder layer
 lambdas = np.array([1000., 10., 0.1])
 
 trainer = LadderAdamTrainer(rng=rng, batchsize=batchsize, epochs=1, alpha=0.02, beta1=0.9, beta2=0.999, eps=1e-08,
