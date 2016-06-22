@@ -254,7 +254,8 @@ class LadderAdamTrainer(AdamTrainer):
         cost = self.cost(network, coding_dist, output) + self.l1_weight * self.l1_regularization(network) + \
                                                          self.l2_weight * self.l2_regularization(network)
         # unsupervised cost
-        cost += self.unsupervised_cost(network)
+        us = self.unsupervised_cost(network)
+        cost += us
 
         error = None
 
@@ -275,7 +276,7 @@ class LadderAdamTrainer(AdamTrainer):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error)
+        return (cost, updates, error, us)
 
     def train(self, network, lambdas, labeled_train_input, labeled_train_output,
                                       unlabeled_train_input, unlabeled_train_output,
@@ -301,10 +302,10 @@ class LadderAdamTrainer(AdamTrainer):
         self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
         
-        cost, updates, error = self.get_cost_updates(network, input, output)
+        cost, updates, error, us = self.get_cost_updates(network, input, output)
 
         train_func = theano.function(inputs=[index], 
-                                     outputs=[cost, error], 
+                                     outputs=[cost, error, us], 
                                      updates=updates, 
                                      givens={input:join(unlabeled_train_input[index*self.batchsize:(index+1)*self.batchsize], labeled_train_input),
                                              output:join(unlabeled_train_output[index*self.batchsize:(index+1)*self.batchsize], labeled_train_output),}, 
@@ -350,8 +351,10 @@ class LadderAdamTrainer(AdamTrainer):
             
             tr_costs  = []
             tr_errors = []
+            tr_us = []
             for bii, bi in enumerate(train_batchinds):
-                tr_cost, tr_error = train_func(bi)
+                tr_cost, tr_error, us = train_func(bi)
+                tr_us.append(us)
 
                 # tr_error might be nan for a batch without labels in semi-supervised learning
                 if not np.isnan(tr_error):
@@ -370,8 +373,8 @@ class LadderAdamTrainer(AdamTrainer):
             valid_cost, valid_error = valid_func()
             valid_diff = valid_error - best_valid_error
 
-            sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
-                (epoch, curr_tr_mean * 100., diff_tr_mean * 100., valid_error * 100., valid_diff * 100., str(datetime.now())[11:19]))
+            sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f unsupervised_cost: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
+                (epoch, curr_tr_mean * 100., diff_tr_mean * 100., np.mean(tr_us), valid_error * 100., valid_diff * 100., str(datetime.now())[11:19]))
             sys.stdout.flush()
 
             # if we got the best validation score until now

@@ -50,12 +50,12 @@ network = LadderNetwork(
         sigma=sigma
 )
 
- Weights for the layer-wise unsupervised cost, as found in [1] given bottom-to-top,
- i.e. lambdas[0] is the weight of the reconstruction error for the first
- encoder and last decoder layer
+# Weights for the layer-wise unsupervised cost, as found in [1] given bottom-to-top,
+# i.e. lambdas[0] is the weight of the reconstruction error for the first
+# encoder and last decoder layer
 lambdas = np.array([1000., 10., 0.1])
 
-trainer = LadderAdamTrainer(rng=rng, batchsize=batchsize, epochs=1, alpha=0.02, beta1=0.9, beta2=0.999, eps=1e-08,
+trainer = LadderAdamTrainer(rng=rng, batchsize=batchsize, epochs=10, alpha=0.02, beta1=0.9, beta2=0.999, eps=1e-08,
                             l1_weight=0.0, l2_weight=0.0, supervised_cost='cross_entropy')
 
 trainer.train(network=network, lambdas=lambdas, labeled_train_input = l_train_set_x, labeled_train_output = l_train_set_y,
