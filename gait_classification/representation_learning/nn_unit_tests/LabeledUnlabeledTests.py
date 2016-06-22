@@ -54,4 +54,4 @@ print join_func(l_input, u_input)
 print 'joint output:'
 print join_func(l_output, u_output)
 print 'error:'
-print error_func(x, y)
+print error_func(x, y) 
