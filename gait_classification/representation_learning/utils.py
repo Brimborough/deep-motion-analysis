@@ -13,13 +13,14 @@ import os
 import theano
 import theano.tensor as T
 
+from copy import deepcopy
+
 def scale_to_unit_interval(ndar, eps=1e-8):
     """ Scales all values in the ndarray ndar to be between 0 and 1 """
     ndar = ndar.copy()
     ndar -= ndar.min()
     ndar *= 1.0 / (ndar.max() + eps)
     return ndar
-
 
 def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                        scale_rows_to_unit_interval=True,
@@ -225,23 +226,75 @@ def load_data(dataset):
             (test_set_x, test_set_y)]
     return rval
 
-def remove_labels(rng, one_hot_labels, n_labelled_datapoints):
+def get_labels_to_remove(n_instances, n_to_remove):
+    """
+    Returns an array which indicates the number of labels to remove per class.
+    This ensures that labels are first removed from a the class with the maximum
+    number of labeled instances. 
+    """
+    if (n_to_remove > sum(n_instances)):
+        raise ValueError('Number of labels to remove greater than number of labeled instances')
+
+    to_remove = np.zeros([len(n_instances)])
+
+    if (n_to_remove == 0):
+        return to_remove
+
+    max = np.max(n_instances)
+
+    while (n_to_remove > 0):
+        max_idx = np.where(n_instances == max)[0]
+        mask = np.array(len(n_instances)*[True])
+        mask[max_idx] = False
+
+        if (n_to_remove < len(max_idx)):
+            max_idx = max_idx[:n_to_remove]
+
+        # Number of items that would be removed to set all max items equal to second largest smallest number
+        mmax = np.max(n_instances[mask]) if (len(n_instances[mask]) > 0) else max-(n_to_remove / len(max_idx))
+        remove_it = np.min([(n_to_remove / len(max_idx)), (max - mmax)])
+
+        to_remove[max_idx] += remove_it
+        n_instances[max_idx] -= remove_it
+
+        n_to_remove -= len(max_idx) * remove_it
+        max -= remove_it
+
+    return to_remove
+
+def remove_labels(rng, one_hot_labels, n_labels_to_remove):
     """
     This is used to create an (artifical) semi-supervised learning environment.
-    By convention, unlabelled data is marked as a vector of zeros in lieu of a one-hot-vector
+    By convention, unlabeled data is marked as a vector of zeros in lieu of a one-hot-vector
     """
 
     n_datapoints = one_hot_labels.shape[0]
-    label_flags = np.arange(n_datapoints)
+    n_labeled_datapoints = int(np.sum(np.sum(one_hot_labels, axis=1)))
 
-    rng.shuffle(label_flags)
+    n_classes = one_hot_labels.shape[1]
+    n_instances_per_class = np.sum(one_hot_labels, axis=0)
 
-    # Randomnly remove labels to create a semi-supervised setting
-    unlabelled_points = label_flags[0:n_datapoints-n_labelled_datapoints].reshape(n_datapoints-n_labelled_datapoints, 1)
+    if (n_datapoints != n_labeled_datapoints):
+        raise ValueError('Received unlabeled instances')
 
-    # Remove labels
-    one_hot_labels[unlabelled_points] = 0
+    label_flags = []
+    for i in xrange(n_classes):
+        mask = (one_hot_labels[:,i] == 1)
+        # indices of datapoints belonging to class i
+        label_flags.append(np.where(mask == True)[0])
 
-    assert np.sum(np.sum(one_hot_labels, axis=0)) == n_labelled_datapoints
+    n_to_remove = get_labels_to_remove(deepcopy(n_instances_per_class), n_labels_to_remove)
+
+    # remove labels
+    for id, lf in enumerate(label_flags):
+        rng.shuffle(lf)
+
+        # Randomnly remove labels to create a semi-supervised setting
+        unlabeled_points = lf[0:n_to_remove[id]].reshape(n_to_remove[id], 1)
+
+        # Remove labels
+        one_hot_labels[unlabeled_points] = 0
+
+    assert np.sum(one_hot_labels) == (n_datapoints - n_labels_to_remove)
 
     return one_hot_labels

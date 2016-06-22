@@ -41,14 +41,12 @@ class AdamTrainer(object):
             self.cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
-            self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
+            self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
             # classification error (taking into account only training examples with labels)
-#            self.error  = lambda network, y_pred, y: T.mean(T.neq(T.argmax(y_pred, axis=1)[T.nonzero(y)[0]], T.nonzero(y)))
             self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         elif cost == 'cross_entropy':
             self.y_pred = lambda network, x: network(x)
-            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(y_pred[T.nonzero(y)], y[T.nonzero(y)]).mean()
-#            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), unlabeled(y, y)).mean()
+            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
             # classification error (taking into account only training examples with labels)
             self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         else:
@@ -279,7 +277,7 @@ class LadderAdamTrainer(AdamTrainer):
                    [(self.t, self.t+1)])
 
         return (cost, updates, error, us)
-        
+
     def train(self, network, lambdas, labeled_train_input, labeled_train_output,
                                       unlabeled_train_input, unlabeled_train_output,
                                       valid_input=None, valid_output=None,
