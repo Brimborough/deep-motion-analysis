@@ -1,4 +1,5 @@
 import numpy as np
+import operator
 import sys
 import theano
 import theano.tensor as T
@@ -10,7 +11,7 @@ from theano.ifelse import ifelse
 from theano.tensor.shared_randomstreams import RandomStreams
 
 class LadderNetwork(object):
-    """Implementation of the LadderNetwork as intoroduced in [1].
+    """Implementation of the LadderNetwork as introduced in [1].
        Partially based on: https://github.com/rinuboney/ladder/
     
     References:
@@ -60,8 +61,14 @@ class LadderNetwork(object):
         # Dimensionality of the input
         n_units.insert(0, self.encoding_layers[0].input_units)
 
+        def setToOne(a, idx):
+            a[:, idx] = 1.
+            return theano.shared(value=a, borrow=True)
+
         # Parameters needed to learn an optimal denoising function
-        self.A = [theano.shared(value=np.ones((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[::-1]]
+        self.A = [setToOne(np.zeros((i, 10), dtype=theano.config.floatX), [0, 1, 6]) for i in n_units[::-1]]
+#        self.A = [theano.shared(value=np.zeros((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[::-1]]
+
         # Parameters of trainable batchnorm layers
         self.gamma = [theano.shared(value=np.ones((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[1:]]
         self.beta = [theano.shared(value=np.zeros((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[1:]]
@@ -74,11 +81,11 @@ class LadderNetwork(object):
         """Calculates both a clean/noisy version of the encoder as well as the 
            corresponding denoising decoder. We pass both input and output to be able
            to split between labeled and unlabeled data points."""
-
+        # 123, 127
         # Returns classification predictions and layerwise data
-        noisy_y, output, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
+        noisy_y, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
         # sigma = 0.0 -> no noise. Used to supply denoising targets
-        self.predictions, output, clean = self.fprop(input=input, output=output, sigma=0.0)
+        self.predictions, clean = self.fprop(input=input, output=output, sigma=0.0)
 
         # Decoder part of the denoising autoencoder, pass only unlabeled data
         self.inv(self.unlabeled(noisy_y, output), noisy['unlabeled'], clean['unlabeled'])
@@ -146,28 +153,29 @@ class LadderNetwork(object):
         input = self.add_noise(input, sigma)
         # 78
         d['labeled']['z_pre'][0], d['unlabeled']['z_pre'][0] = self.split_data(input, output)
+        d['unlabeled']['mean'][0] = d['unlabeled']['z_pre'][0].mean(0)
+        d['unlabeled']['std'][0]  = d['unlabeled']['z_pre'][0].std(0)
 
         # Hidden layer id
         h_id = 0
         for layer in self.encoding_layers:
             if (type(layer) is ActivationLayer):
-                # labeled & unlabeld input
+                # labeled & unlabeled input
                 l_input, u_input = self.split_data(input, output)
-                l_output, u_output = self.split_data(output, output)
 
+                # 82
                 u_mean = u_input.mean(0)
                 u_std  = u_input.std(0)
 
-                # Batch-normalise unlabeled and labeld examples seperatly 110/84-96
+                # Batch-normalise unlabeled and labeled examples seperatly 110/84-96
+                # 90-91
                 l_input = self.batchnorm(l_input)
                 u_input = self.batchnorm(u_input, u_mean, u_std)
 
-                # 114: TODO: ReLUs don't need beta, gamma
+                # 91
                 input = self.add_noise(self.join(l_input, u_input), sigma)
+                # 114: TODO: ReLUs don't need beta, gamma
                 input = self.beta_gamma(input, h_id)
-
-                # Re-join output to keep labels correct
-                output = self.join(l_output, u_output)
 
                 # Re-used during decoding (118-119)
                 d['labeled']['z_pre'][h_id+1]   = l_input 
@@ -180,7 +188,7 @@ class LadderNetwork(object):
 
             input = layer(input)
 
-        return input, output, d
+        return input, d
 
     def compute_mu(self, input, A, offset=0):
         # Implements eq. (2) in [1] 
@@ -202,17 +210,19 @@ class LadderNetwork(object):
             if (0 == d_index):
                 u = noisy_y
             else:
-                d_layer = self.decoding_layers[d_index-1]
-                u = d_layer.inv(z_est[d_index-1])
+                u = self.decoding_layers[d_index-1].inv(z_est[d_index-1])
 
             u = self.batchnorm(u)
 
             # Computations performed in the encoder
             id = n_hidden_layers - d_index
             noisy_z = u_noisy['z_pre'][id]
-            mean    = u_clean['mean'].get(id, None)
-            std     = u_clean['std'].get(id, None)
+#            mean    = u_clean['mean'].get(id, None)
+#            std     = u_clean['std'].get(id, None)
+            mean    = u_clean['mean'][id]
+            std     = u_clean['std'][id]
 
+            # Add pre-activations from corresponding layer in the encoder
             z_est[d_index] = self.skip_connect(u, noisy_z, d_index)
 
             # Used to calculate the denoising cost
