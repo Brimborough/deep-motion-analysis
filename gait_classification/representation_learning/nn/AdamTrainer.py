@@ -237,6 +237,8 @@ class LadderAdamTrainer(AdamTrainer):
 
         for pair in zip(self.lambdas, network.clean_z, network.reconstructions):
             if (0.0 < pair[0]):
+#               TODO: research effect of n_units
+#                layerwise_mse += (pair[0] / pair[1]) * self.mse(pair[2], pair[3])
                 layerwise_mse += pair[0] * self.mse(pair[1], pair[2])
 
         return layerwise_mse

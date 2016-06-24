@@ -8,7 +8,7 @@ from nn.BatchNormLayer import BatchNormLayer, InverseBatchNormLayer
 from nn.HiddenLayer import HiddenLayer
 from nn.LadderNetwork import LadderNetwork
 
-from utils import load_data, remove_labels
+from tools.utils import load_data, remove_labels
 
 rng = np.random.RandomState(23455)
 

@@ -57,21 +57,21 @@ class LadderNetwork(object):
         self.clean_z         = []
         self.reconstructions = []
 
-        n_units =  [l.output_units for l in self.encoding_layers if (hasattr(l, 'output_units'))]
+        self.n_units =  [l.output_units for l in self.encoding_layers if (hasattr(l, 'output_units'))]
         # Dimensionality of the input
-        n_units.insert(0, self.encoding_layers[0].input_units)
+        self.n_units.insert(0, self.encoding_layers[0].input_units)
 
         def setToOne(a, idx):
             a[:, idx] = 1.
             return theano.shared(value=a, borrow=True)
 
         # Parameters needed to learn an optimal denoising function
-        self.A = [setToOne(np.zeros((i, 10), dtype=theano.config.floatX), [0, 1, 6]) for i in n_units[::-1]]
+        self.A = [setToOne(np.zeros((i, 10), dtype=theano.config.floatX), [0, 1, 6]) for i in self.n_units[::-1]]
 #        self.A = [theano.shared(value=np.zeros((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[::-1]]
 
         # Parameters of trainable batchnorm layers
-        self.gamma = [theano.shared(value=np.ones((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[1:]]
-        self.beta = [theano.shared(value=np.zeros((i, 10), dtype=theano.config.floatX), borrow=True) for i in n_units[1:]]
+        self.gamma = [theano.shared(value=np.ones((i, 10), dtype=theano.config.floatX), borrow=True) for i in self.n_units[1:]]
+        self.beta = [theano.shared(value=np.zeros((i, 10), dtype=theano.config.floatX), borrow=True) for i in self.n_units[1:]]
 
         self.params += self.A
         self.params += self.gamma
@@ -153,8 +153,6 @@ class LadderNetwork(object):
         input = self.add_noise(input, sigma)
         # 78
         d['labeled']['z_pre'][0], d['unlabeled']['z_pre'][0] = self.split_data(input, output)
-        d['unlabeled']['mean'][0] = d['unlabeled']['z_pre'][0].mean(0)
-        d['unlabeled']['std'][0]  = d['unlabeled']['z_pre'][0].std(0)
 
         # Hidden layer id
         h_id = 0
@@ -217,10 +215,8 @@ class LadderNetwork(object):
             # Computations performed in the encoder
             id = n_hidden_layers - d_index
             noisy_z = u_noisy['z_pre'][id]
-#            mean    = u_clean['mean'].get(id, None)
-#            std     = u_clean['std'].get(id, None)
-            mean    = u_clean['mean'][id]
-            std     = u_clean['std'][id]
+            mean    = u_clean['mean'].get(id, None)
+            std     = u_clean['std'].get(id, None)
 
             # Add pre-activations from corresponding layer in the encoder
             z_est[d_index] = self.skip_connect(u, noisy_z, d_index)
