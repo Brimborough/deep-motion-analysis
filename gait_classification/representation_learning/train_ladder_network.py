@@ -8,12 +8,11 @@ from nn.BatchNormLayer import BatchNormLayer, InverseBatchNormLayer
 from nn.HiddenLayer import HiddenLayer
 from nn.LadderNetwork import LadderNetwork
 
-from tools.utils import load_data, remove_labels
+from tools.utils import load_mnist, remove_labels
 
 rng = np.random.RandomState(23455)
 
-dataset = '../data/mnist/mnist.pkl.gz'
-datasets = load_data(dataset)
+datasets = load_mnist(rng)
 
 shared = lambda d: theano.shared(d, borrow=True)
 

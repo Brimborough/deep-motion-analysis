@@ -13,6 +13,7 @@ import os
 import theano
 import theano.tensor as T
 
+from collections import defaultdict
 from copy import deepcopy
 
 def scale_to_unit_interval(ndar, eps=1e-8):
@@ -142,89 +143,6 @@ def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                     ] = this_img * c
         return out_array
 
-def load_data(dataset):
-    ''' Loads the dataset
-
-    :type dataset: string
-    :param dataset: the path to the dataset (here MNIST)
-    '''
-
-    #############
-    # LOAD DATA #
-    #############
-
-    # Download the MNIST dataset if it is not present
-    data_dir, data_file = os.path.split(dataset)
-    if data_dir == "" and not os.path.isfile(dataset):
-        # Check if dataset is in the data directory.
-        new_path = os.path.join(
-            os.path.split(__file__)[0],
-            "..",
-            "data",
-            dataset
-        )
-        if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
-            dataset = new_path
-
-    if (not os.path.isfile(dataset)) and data_file == 'mnist.pkl.gz':
-        from six.moves import urllib
-        origin = (
-            'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
-        )
-        print('Downloading data from %s' % origin)
-        urllib.request.urlretrieve(origin, dataset)
-
-    print('... loading data')
-
-    # Load the dataset
-    with gzip.open(dataset, 'rb') as f:
-        try:
-            train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
-        except:
-            train_set, valid_set, test_set = pickle.load(f)
-    # train_set, valid_set, test_set format: tuple(input, target)
-    # input is a np.ndarray of 2 dimensions (a matrix)
-    # where each row corresponds to an example. target is a
-    # np.ndarray of 1 dimension (vector) that has the same length as
-    # the number of rows in the input. It should give the target
-    # to the example with the same index in the input.
-
-    def shared_dataset(data_xy, borrow=True):
-        """ Function that loads the dataset into shared variables
-
-        The reason we store our dataset in shared variables is to allow
-        Theano to copy it into the GPU memory (when code is run on GPU).
-        Since copying data into the GPU is slow, copying a minibatch everytime
-        is needed (the default behaviour if the data is not in a shared
-        variable) would lead to a large decrease in performance.
-        """
-        data_x, data_y = data_xy
-
-        n_datapoints = data_y.shape[0]
-        # Convert to one_hot_labels
-        # Digits 0-9: 10 classes
-        one_hot_labels = np.zeros([n_datapoints, 10])
-        one_hot_labels[np.arange(n_datapoints), data_y] = 1
-
-#        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=borrow)
-#        shared_y = theano.shared(np.asarray(one_hot_labels, dtype=theano.config.floatX), borrow=borrow)
-
-        # When storing data on the GPU it has to be stored as floats
-        # therefore we will store the labels as ``floatX`` as well
-        # (``shared_y`` does exactly that). But during our computations
-        # we need them as ints (we use labels as index, and if they are
-        # floats it doesn't make sense) therefore instead of returning
-        # ``shared_y`` we will have to cast it to int. This little hack
-        # lets ous get around this issue
-        return np.asarray(data_x, dtype=theano.config.floatX), np.asarray(one_hot_labels, dtype=theano.config.floatX) #T.cast(shared_y, 'int32')
-
-    test_set_x, test_set_y = shared_dataset(test_set)
-    valid_set_x, valid_set_y = shared_dataset(valid_set)
-    train_set_x, train_set_y = shared_dataset(train_set)
-
-    rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
-            (test_set_x, test_set_y)]
-    return rval
 
 def get_labels_to_remove(n_instances, n_to_remove):
     """
@@ -295,6 +213,150 @@ def remove_labels(rng, one_hot_labels, n_labels_to_remove):
         # Remove labels
         one_hot_labels[unlabeled_points] = 0
 
-    assert np.sum(one_hot_labels) == (n_datapoints - n_labels_to_remove)
-
     return one_hot_labels
+
+def fair_split(rng, data, one_hot_labels, proportions):
+    """
+    Splits a dataset in parts given by the percentage in proportions. This split is done
+    in a way that ensures the original balance between classes in every part.
+    This can be important in classificaton, for instance
+    """
+
+    n_classes = one_hot_labels.shape[1]
+    n_instances_per_class = np.sum(one_hot_labels, axis=0).astype(int)
+    n_splits = len(proportions)
+
+    n_instances_per_split = np.array([(p*n_instances_per_class).astype(int) for p in proportions])#.astype(float)
+    # In case of uneven splits
+    n_instances_per_split[0] += n_instances_per_class - np.sum(n_instances_per_split, axis=0)
+
+    n_instances_per_split = np.cumsum(n_instances_per_split, axis=0)
+    datasets = [[] for n in xrange(n_splits)]
+
+    for i in xrange(n_classes):
+        mask = (one_hot_labels[:,i] == 1)
+
+        # indices of datapoints belonging to class i
+        label_flags = np.where(mask == True)[0]
+        rng.shuffle(label_flags)
+
+        splits = np.split(label_flags, n_instances_per_split[:, i])
+        for id, d in enumerate(datasets):
+            d += splits[id].tolist()
+
+    map(rng.shuffle, datasets)
+
+    for id, d in enumerate(datasets):
+        datasets[id] = (data[d], one_hot_labels[d])
+
+    return datasets
+
+def load_styletransfer(rng, split):
+
+    print('... loading data')
+
+    data = np.load('../data/data_styletransfer.npz')
+
+    clips = data['clips']
+
+    clips = np.swapaxes(clips, 1, 2)
+    X = clips[:,:-4]
+
+    #(Motion, Styles)
+    classes = data['classes']
+
+    # get mean and std
+    preprocessed = np.load('../data/styletransfer_preprocessed.npz')
+
+    Xmean = preprocessed['Xmean']
+    Xmean = Xmean.reshape(1,len(Xmean),1)
+    Xstd  = preprocessed['Xstd']
+    Xstd = Xstd.reshape(1,len(Xstd),1)
+
+    Xstd[np.where(Xstd == 0)] = 1
+
+    X = (X - Xmean) / Xstd
+
+    # Motion labels in one-hot vector format
+    Y = np.load('../data/styletransfer_motions_one_hot.npz')['one_hot_vectors']
+
+    datasets = fair_split(rng, X, Y, split)
+    return datasets
+
+def load_mnist(rng):
+    ''' Loads the MNIST dataset
+
+    :type dataset: string
+    :param dataset: the path to the dataset (here MNIST)
+    '''
+
+    dataset = '../data/mnist/mnist.pkl.gz'
+
+    # Download the MNIST dataset if it is not present
+    data_dir, data_file = os.path.split(dataset)
+    if data_dir == "" and not os.path.isfile(dataset):
+        # Check if dataset is in the data directory.
+        new_path = os.path.join(
+            os.path.split(__file__)[0],
+            "..",
+            "data",
+            dataset
+        )
+        if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
+            dataset = new_path
+
+    if (not os.path.isfile(dataset)) and data_file == 'mnist.pkl.gz':
+        from six.moves import urllib
+        origin = (
+            'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
+        )
+        print('Downloading data from %s' % origin)
+        urllib.request.urlretrieve(origin, dataset)
+
+    print('... loading data')
+
+    # Load the dataset
+    with gzip.open(dataset, 'rb') as f:
+        try:
+            train_set, valid_set, test_set = pickle.load(f, encoding='latin1')
+        except:
+            train_set, valid_set, test_set = pickle.load(f)
+    # train_set, valid_set, test_set format: tuple(input, target)
+    # input is a np.ndarray of 2 dimensions (a matrix)
+    # where each row corresponds to an example. target is a
+    # np.ndarray of 1 dimension (vector) that has the same length as
+    # the number of rows in the input. It should give the target
+    # to the example with the same index in the input.
+
+    def one_hot_labels(data_xy, borrow=True):
+        """ Function that loads the dataset into shared variables
+
+        The reason we store our dataset in shared variables is to allow
+        Theano to copy it into the GPU memory (when code is run on GPU).
+        Since copying data into the GPU is slow, copying a minibatch everytime
+        is needed (the default behaviour if the data is not in a shared
+        variable) would lead to a large decrease in performance.
+        """
+        data_x, data_y = data_xy
+
+        n_datapoints = data_y.shape[0]
+        # Convert to one_hot_labels
+        # Digits 0-9: 10 classes
+        one_hot_labels = np.zeros([n_datapoints, 10])
+        one_hot_labels[np.arange(n_datapoints), data_y] = 1
+
+        # When storing data on the GPU it has to be stored as floats
+        # therefore we will store the labels as ``floatX`` as well
+        # (``shared_y`` does exactly that). But during our computations
+        # we need them as ints (we use labels as index, and if they are
+        # floats it doesn't make sense) therefore instead of returning
+        # ``shared_y`` we will have to cast it to int. This little hack
+        # lets ous get around this issue
+        return (np.asarray(data_x, dtype=theano.config.floatX), np.asarray(one_hot_labels, dtype=theano.config.floatX)) #T.cast(shared_y, 'int32')
+
+    train_set = one_hot_labels(train_set)
+    valid_set = one_hot_labels(valid_set)
+    test_set  = one_hot_labels(test_set)
+
+    datasets = [train_set, valid_set, test_set]
+    return datasets

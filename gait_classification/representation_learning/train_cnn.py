@@ -3,21 +3,19 @@ import theano
 import theano.tensor as T
 
 from nn.ActivationLayer import ActivationLayer
-from nn.HiddenLayer import HiddenLayer
-from nn.Conv2DLayer import Conv2DLayer
-from nn.Pool2DLayer import Pool2DLayer
-from nn.NoiseLayer import NoiseLayer
-
-from nn.Network import Network
 from nn.AdamTrainer import AdamTrainer
+from nn.Conv2DLayer import Conv2DLayer
+from nn.HiddenLayer import HiddenLayer
+from nn.Network import Network
+from nn.NoiseLayer import NoiseLayer
+from nn.Pool2DLayer import Pool2DLayer
 from nn.ReshapeLayer import ReshapeLayer
 
-from utils import load_data
+from tools.utils import load_mnist
 
 rng = np.random.RandomState(23455)
 
-dataset = '../data/mnist/mnist.pkl.gz'
-datasets = load_data(dataset)
+datasets = load_mnist(rng)
 
 shared = lambda d: T.shared(d, borrow=True)
 
