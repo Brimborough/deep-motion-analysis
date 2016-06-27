@@ -13,10 +13,8 @@ from BatchNormLayer import BatchNormLayer
 
 """
 
-    Write test for truncated gradients only working for few time steps
-    Write test for clipped gradients, testing.
+        SHAPE FOR LSTM: TimeSeries, Batch, Feature_size
+        input.dimshuffle(1,0,2)
 
+16*90 90*90 = 16*90
 """
-
-# Write simple scan, truncating gradients for x ** 2 to 2 on a sequence of 4, check updates correspond with what you believe
-

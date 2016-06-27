@@ -171,12 +171,12 @@ class LSTM(object):
 
         self.backwards = backwards #BLSTM
         self.return_seq = return_seq #Return sequences
-        self.mask = mask if mask is None else '' #TODO: Ensure people make masks....
+        self.mask = '' if mask is None else mask #TODO: Ensure people make masks....
         self.prefix = prefix
         self.truncated = truncated
         self.clip_gradients = clip_gradients
         self.batch_size = batch_size
-        self.input_shape = input_shape
+        self.input_shape = input_shape #TODO Should this be batch size, since we shuffle dimensions
         self.bn = bn
         self.hidden_shape = hidden_shape
         self.shared_params, self.clipped_params = \
@@ -194,7 +194,7 @@ class LSTM(object):
 
 
     '''
-        thoughts: - should we swap axes if coming from a conv?
+        thoughts: - should we swap axes if coming from a conv? SHAPE: TS,BATCH,Vector Length
         - shape for BN
     '''
     def __call__(self, input):
@@ -204,6 +204,7 @@ class LSTM(object):
         # For BLSTM
         if self.backwards:
             input = input[::-1]
+            self.mask = self.mask[::-1] # Should move the mask backwards also.
 
         # Helper coder to split
         def _slice(_x, n, dim):

@@ -568,7 +568,6 @@ def train_lstm(
                 # Return something of shape (minibatch maxlen, n samples)
                 x, mask, y = prepare_data(x, y)
                 n_samples += x.shape[1]
-
                 cost = f_grad_shared(x, mask, y)
                 f_update(lrate)
 
@@ -599,9 +598,7 @@ def train_lstm(
 
                     history_errs.append([valid_err, test_err])
 
-                    if (best_p is None or
-                        valid_err <= numpy.array(history_errs)[:,
-                                                               0].min()):
+                    if (best_p is None or valid_err <= numpy.array(history_errs)[:,0].min()):
 
                         best_p = unzip(tparams)
                         bad_counter = 0

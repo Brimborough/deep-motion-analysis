@@ -10,7 +10,7 @@ rng = np.random.RandomState(23455)
 BATCH_SIZE = 1
 
 #Load the preprocessed to save some time
-X = np.load('../data/data_cmu.npz')['clips']
+X = np.load('../data/Joe/data_edin_locomotion.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
@@ -31,8 +31,8 @@ for layer in network.layers:
     if isinstance(layer, Pool1DLayer):  layer.depooler = lambda x, **kw: x/2
 
 # Values received from  data
-Xnout = np.empty([17924,256,30], dtype=theano.config.floatX)
-Xoout = np.empty([17924,256,30], dtype=theano.config.floatX)
+Xnout = np.empty([321,256,30], dtype=theano.config.floatX)
+Xoout = np.empty([321,256,30], dtype=theano.config.floatX)
 
 # Go through inputs in factors of 4481
 for input in range(0,len(X),BATCH_SIZE):
@@ -47,6 +47,8 @@ for input in range(0,len(X),BATCH_SIZE):
     Xnout[input:input + BATCH_SIZE] = np.array(Network(network)(Xnois).eval()).astype(theano.config.floatX)[:]
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)[:]
+
+
 
 #Save the noisy activations
 np.savez_compressed('../data/Joe/HiddenActivations', Noisy=Xnout, Orig=Xoout)
