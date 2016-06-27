@@ -31,17 +31,17 @@ batchsize = 2
 
 network = Network(
     Conv1DLayer(rng, (64, 66, 25), (batchsize, 66, 240)),
-    BatchNormLayer((batchsize, 64, 240)),
+    BatchNormLayer(rng, (batchsize, 64, 240)),
     ActivationLayer(rng, f='ReLU'),
     Pool1DLayer(rng, (2,), (batchsize, 64, 240)),
 
     Conv1DLayer(rng, (128, 64, 25), (batchsize, 64, 120)),
-    BatchNormLayer((batchsize, 128, 120)),
+    BatchNormLayer(rng, (batchsize, 128, 120)),
     ActivationLayer(rng, f='ReLU'),
     Pool1DLayer(rng, (2,), (batchsize, 128, 120)),
     
     Conv1DLayer(rng, (256, 128, 25), (batchsize, 128, 60)),
-    BatchNormLayer((batchsize, 256, 60)),
+    BatchNormLayer(rng, (batchsize, 256, 60)),
     ActivationLayer(rng, f='ReLU'),
     Pool1DLayer(rng, (2,), (batchsize, 256, 60)),
 

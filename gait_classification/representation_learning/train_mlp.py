@@ -22,11 +22,11 @@ test_set_x, test_set_y   = map(shared, datasets[2])
 
 network = Network(
     HiddenLayer(rng, (784, 500)),
-    BatchNormLayer((784, 500)),
+    BatchNormLayer(rng, (784, 500)),
     ActivationLayer(rng, f='ReLU'),
 
     HiddenLayer(rng, (500, 10)),
-    BatchNormLayer((500, 10)),
+    BatchNormLayer(rng, (500, 10)),
     ActivationLayer(rng, f='softmax')
 )
 

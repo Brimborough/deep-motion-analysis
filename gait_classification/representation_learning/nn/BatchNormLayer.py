@@ -22,7 +22,7 @@ class BatchNormLayer(object):
            Internal Covariate Shift. http://arxiv.org/abs/1502.03167.
     """
 
-    def __init__(self, shape, axes=(0,), epsilon=1e-10):
+    def __init__(self, rng, shape, axes=(0,), epsilon=1e-10):
         self.axes = axes
         self.shape = [(1 if si in axes else s) for si,s in enumerate(shape)]
         self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
