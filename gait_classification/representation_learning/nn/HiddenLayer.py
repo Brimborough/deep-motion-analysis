@@ -20,8 +20,8 @@ class HiddenLayer(object):
         if b is None:
             b = np.zeros((weights_shape[1],), dtype=theano.config.floatX)
 
-        self.input_units = W.shape[0]
-        self.output_units = W.shape[1]
+        self.input_units = (W.shape[0],)
+        self.output_units = (W.shape[1],)
         
         self.W = theano.shared(value=W, borrow=True)
         self.b = theano.shared(value=b, borrow=True)

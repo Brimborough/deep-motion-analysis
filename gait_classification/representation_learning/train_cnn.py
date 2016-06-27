@@ -23,25 +23,24 @@ train_set_x, train_set_y = map(shared, datasets[0])
 valid_set_x, valid_set_y = map(shared, datasets[1])
 test_set_x, test_set_y   = map(shared, datasets[2])
 
-batchsize = 1
+batchsize = 1000
 
 train_set_x = train_set_x.reshape((50000, 1, 28, 28))
 valid_set_x = valid_set_x.reshape((10000, 1, 28, 28))
 test_set_x  = test_set_x.reshape((10000, 1, 28, 28))
 
 network = Network(
-	NoiseLayer(rng, 0.3),
-
 	Conv2DLayer(rng, (4, 1, 5, 5), (batchsize, 1, 28, 28)),
-	Pool2DLayer(rng, (batchsize, 4, 28, 28)),
+        BatchNormLayer(rng, (batchsize, 4, 28, 28), axes=(0,2,3)),
 	ActivationLayer(rng, f='ReLU'),
-	ReshapeLayer(rng, (4*14*14, )),
-
+	Pool2DLayer(rng, (batchsize, 4, 28, 28)),
+	ReshapeLayer(rng, (batchsize, 4*14*14)),
 	HiddenLayer(rng, (4*14*14, 10)),
 	ActivationLayer(rng, f='softmax')
 )
 
-trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=5, alpha=0.00001, cost='cross_entropy')
+trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=15, alpha=0.1, cost='cross_entropy')
 trainer.train(network=network, train_input=train_set_x, train_output=train_set_y,
                                valid_input=valid_set_x, valid_output=valid_set_y,
                                test_input=test_set_x, test_output=test_set_y, filename=None)
+

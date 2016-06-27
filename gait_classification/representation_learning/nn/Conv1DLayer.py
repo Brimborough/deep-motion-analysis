@@ -25,8 +25,9 @@ class Conv1DLayer(object):
         self.filter_shape = filter_shape
         self.input_shape = input_shape
         self.output_shape = (input_shape[0], filter_shape[0], input_shape[2])
-        self.input_units = np.prod(self.input_shape)
-        self.output_units = np.prod(self.output_shape)
+        # Not counting the bachsize
+        self.input_units = self.input_shape[1:]
+        self.output_units = self.output_shape[1:]
 
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         
