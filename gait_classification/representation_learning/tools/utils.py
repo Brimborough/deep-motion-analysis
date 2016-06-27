@@ -201,7 +201,7 @@ def remove_labels(rng, one_hot_labels, n_labels_to_remove):
         # indices of datapoints belonging to class i
         label_flags.append(np.where(mask == True)[0])
 
-    n_to_remove = get_labels_to_remove(deepcopy(n_instances_per_class), n_labels_to_remove)
+    n_to_remove = get_labels_to_remove(deepcopy(n_instances_per_class), n_labels_to_remove).astype(int)
 
     # remove labels
     for id, lf in enumerate(label_flags):
