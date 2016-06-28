@@ -37,8 +37,10 @@ class AdamTrainer(object):
         # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
         if   cost == 'mse':
             self.y_pred = lambda network, x: network(x)
-            self.error = lambda network, y_pred, y: T.zeros((1,))
-            self.cost = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
+#            self.error = lambda network, y_pred, y: T.zeros((1,))
+#            self.error = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
+            self.error = lambda network, x, y: T.mean((network(x) - y)**2)
+            self.cost  = lambda network, x, y: T.mean((network(x) - y)**2)
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
@@ -116,11 +118,13 @@ class AdamTrainer(object):
 
         valid_func = None
         if (valid_input):
-            # Full batch evaluation
-            valid_func = theano.function(inputs=[],
+            # TODO: Full batch evaluation impossible for ConvNets
+            valid_batchsize = self.batchsize
+
+            valid_func = theano.function(inputs=[index],
                                          outputs=[cost, error],
-                                         givens={input:valid_input,
-                                                 output:valid_output,},
+                                         givens={input:valid_input[index*valid_batchsize:(index+1)*valid_batchsize],
+                                                 output:valid_output[index*valid_batchsize:(index+1)*valid_batchsize],},
                                          allow_input_downcast=True)
 
         test_func = None
@@ -170,7 +174,14 @@ class AdamTrainer(object):
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
 
-            valid_cost, valid_error = valid_func()
+            valid_batchinds = np.arange(valid_input.shape.eval()[0] // self.batchsize)
+
+            vl_errors = []
+            for bii, bi in enumerate(valid_batchinds):
+                vl_cost, vl_error = valid_func(bi)
+                vl_errors.append(vl_error)
+
+            valid_error = np.mean(vl_errors)
             valid_diff = valid_error - best_valid_error
 
             sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
@@ -188,19 +199,20 @@ class AdamTrainer(object):
 
         end_time = timeit.default_timer()
 
+        sys.stdout.write(('Optimization complete. Best validation score of %f %% '
+                          'obtained at epoch %i\n') % (best_valid_error * 100., best_epoch + 1))
+        sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
+        sys.stdout.flush()
+
         ####################
         # Final Validation #
         ####################
+#        print('... testing the model')
 
-        test_cost, test_error = test_func()
-
-        sys.stdout.write(('Optimization complete. Best validation score of %f %% '
-                          'obtained at epoch %i, with test performance %f %%\n') %
-                         (best_valid_error * 100., best_epoch + 1, test_error * 100.))
-        sys.stdout.flush()
-
-        sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
-        sys.stdout.flush()
+#        test_cost, test_error = test_func()
+#
+#        sys.stdout.write(('Test set performance: %f %%\n') % (test_error * 100.))
+#        sys.stdout.flush()
 
 class LadderAdamTrainer(AdamTrainer):
     """

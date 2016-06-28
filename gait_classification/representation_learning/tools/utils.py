@@ -260,7 +260,7 @@ def load_styletransfer(rng, split):
     clips = data['clips']
 
     clips = np.swapaxes(clips, 1, 2)
-    X = clips[:,:-4]
+    X = clips[:,:-4].astype(theano.config.floatX)
 
     #(Motion, Styles)
     classes = data['classes']
@@ -359,4 +359,28 @@ def load_mnist(rng):
     test_set  = one_hot_labels(test_set)
 
     datasets = [train_set, valid_set, test_set]
+    return datasets
+
+def load_dsg(rng, split):
+
+    print('... loading data')
+
+    train_data = np.load('../data/dsg/train.npz')
+    test_data  = np.load('../data/dsg/test.npz')
+
+    X      = train_data['x'].astype(theano.config.floatX) 
+    x_test = test_data['x'].astype(theano.config.floatX) 
+
+    X = np.concatenate((X, x_test), axis=0).swapaxes(1,3)
+    # Normalise using the moments estimated from both training and test data
+    X = (X - X.mean((0,2,3), keepdims=True)) / (X.std((0,2,3), keepdims=True) + 1e-10)
+    X = X[:8000, ...]
+    x_test = X[8000:, ...]
+
+    Y = train_data['t'] 
+    one_hot_labels = np.eye(4)[Y - 1]
+
+    datasets = fair_split(rng, X, one_hot_labels, split)
+    datasets.append((x_test,))
+
     return datasets
