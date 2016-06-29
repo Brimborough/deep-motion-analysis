@@ -12,8 +12,8 @@ class Conv2DLayer(object):
         self.input_shape = input_shape
         self.output_shape = (input_shape[0], filter_shape[0], input_shape[2], input_shape[3])
         # Not counting the bachsize
-        self.input_units = self.input_shape[1:]
-        self.output_units = self.output_shape[1:]
+        self.input_units = self.input_shape
+        self.output_units = self.output_shape
 
         self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         

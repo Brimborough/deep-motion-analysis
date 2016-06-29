@@ -5,6 +5,7 @@ import theano
 import theano.tensor as T
 
 from datetime import datetime
+from ConvLadderNetwork import ConvLadderNetwork
 from LadderNetwork import LadderNetwork
 from theano.tensor.shared_randomstreams import RandomStreams
 
@@ -245,7 +246,7 @@ class LadderAdamTrainer(AdamTrainer):
 
     def get_cost_updates(self, network, input, output):
 
-        if (type(network) is not LadderNetwork):
+        if (type(network) is not LadderNetwork and (type(network) is not ConvLadderNetwork)):
             raise ValueError('Invalid argument: parameter network must be of type LadderNetwork')
 
         # predict with the clean version, calculate supervised cost with the noisy version
@@ -255,9 +256,10 @@ class LadderAdamTrainer(AdamTrainer):
         # supervised cost + regularisation
         cost = self.cost(network, coding_dist, output) + self.l1_weight * self.l1_regularization(network) + \
                                                          self.l2_weight * self.l2_regularization(network)
+        us = cost
         # unsupervised cost
-        us = self.unsupervised_cost(network)
-        cost += us
+#        us = self.unsupervised_cost(network)
+#        cost += us
 
         error = None
 
@@ -313,23 +315,30 @@ class LadderAdamTrainer(AdamTrainer):
                                              output:join(unlabeled_train_output[index*self.batchsize:(index+1)*self.batchsize], labeled_train_output),}, 
                                      allow_input_downcast=True)
 
-        valid_func = None
-        if (valid_input):
-            # Full batch evaluation
-            valid_func = theano.function(inputs=[],
-                                         outputs=[cost, error],
-                                         givens={input:valid_input,
-                                                 output:valid_output,},
-                                         allow_input_downcast=True)
+#        train_func = theano.function(inputs=[index], 
+#                                     outputs=[cost, error, us], 
+#                                     updates=updates, 
+#                                     givens={input:join(unlabeled_train_input[index*self.batchsize:(index+1)*self.batchsize], unlabeled_train_input[index*self.batchsize:(index+1)*self.batchsize]),
+#                                             output:join(unlabeled_train_output[index*self.batchsize:(index+1)*self.batchsize], unlabeled_train_output[index*self.batchsize:(index+1)*self.batchsize])}, 
+#                                     allow_input_downcast=True)
 
-        test_func = None
-        if (test_input):
-            # Full batch evaluation
-            test_func = theano.function(inputs=[],
-                                        outputs=[cost, error],
-                                        givens={input:test_input,
-                                                output:test_output,},
-                                        allow_input_downcast=True)
+#        valid_func = None
+#        if (valid_input):
+#            # Full batch evaluation
+#            valid_func = theano.function(inputs=[],
+#                                         outputs=[cost, error],
+#                                         givens={input:valid_input,
+#                                                 output:valid_output,},
+#                                         allow_input_downcast=True)
+
+#        test_func = None
+#        if (test_input):
+#            # Full batch evaluation
+#            test_func = theano.function(inputs=[],
+#                                        outputs=[cost, error],
+#                                        givens={input:test_input,
+#                                                output:test_output,},
+#                                        allow_input_downcast=True)
 
         ###############
         # TRAIN MODEL #
@@ -358,6 +367,10 @@ class LadderAdamTrainer(AdamTrainer):
                 tr_cost, tr_error, us = train_func(bi)
                 tr_us.append(us)
 
+                print tr_error
+                print tr_cost
+                print us
+
                 # tr_error might be nan for a batch without labels in semi-supervised learning
                 if not np.isnan(tr_error):
                     tr_errors.append(tr_error)
@@ -372,21 +385,23 @@ class LadderAdamTrainer(AdamTrainer):
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
 
-            valid_cost, valid_error = valid_func()
-            valid_diff = valid_error - best_valid_error
+#            valid_cost, valid_error = valid_func()
+#            valid_diff = valid_error - best_valid_error
+            valid_error = 0.
+            valid_diff  = 0.
 
             sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f unsupervised_cost: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
                 (epoch, curr_tr_mean * 100., diff_tr_mean * 100., np.mean(tr_us), valid_error * 100., valid_diff * 100., str(datetime.now())[11:19]))
             sys.stdout.flush()
 
             # if we got the best validation score until now
-            if valid_error < best_valid_error:
-                best_valid_error = valid_error
-                best_epoch = epoch
-
-                # Only save the model if the validation error improved
-                # TODO: Don't add time needed to save model to training time
-                network.save(filename)
+#            if valid_error < best_valid_error:
+#                best_valid_error = valid_error
+#                best_epoch = epoch
+#
+#                # Only save the model if the validation error improved
+#                # TODO: Don't add time needed to save model to training time
+#                network.save(filename)
 
         end_time = timeit.default_timer()
 
@@ -394,12 +409,12 @@ class LadderAdamTrainer(AdamTrainer):
         # Final Validation #
         ####################
 
-        test_cost, test_error = test_func()
-
-        sys.stdout.write(('Optimization complete. Best validation score of %f %% '
-                          'obtained at epoch %i, with test performance %f %%\n') %
-                         (best_valid_error * 100., best_epoch + 1, test_error * 100.))
-        sys.stdout.flush()
-
-        sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
-        sys.stdout.flush()
+#        test_cost, test_error = test_func()
+#
+#        sys.stdout.write(('Optimization complete. Best validation score of %f %% '
+#                          'obtained at epoch %i, with test performance %f %%\n') %
+#                         (best_valid_error * 100., best_epoch + 1, test_error * 100.))
+#        sys.stdout.flush()
+#
+#        sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
+#        sys.stdout.flush()

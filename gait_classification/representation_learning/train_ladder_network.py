@@ -35,8 +35,7 @@ sigma = 0.3
 network = LadderNetwork(
         encoding_layers =
             [HiddenLayer(rng, (784, 500)),
-            ActivationLayer(rng, f='ReLU'),
-
+            ActivationLayer(rng, f='ReLU'), 
             HiddenLayer(rng, (500, 10)),
             ActivationLayer(rng, f='softmax')],
 
