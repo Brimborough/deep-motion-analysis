@@ -24,7 +24,7 @@ train_set_x, train_set_y = map(shared, datasets[0])
 valid_set_x, valid_set_y = map(shared, datasets[1])
 test_set_x, test_set_y   = map(shared, datasets[2])
 
-batchsize = 1000
+batchsize = 100
 
 train_set_x = train_set_x.reshape((50000, 1, 28, 28))
 valid_set_x = valid_set_x.reshape((10000, 1, 28, 28))

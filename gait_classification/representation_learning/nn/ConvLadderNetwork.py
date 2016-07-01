@@ -5,12 +5,13 @@ import theano
 import theano.tensor as T
 
 from ActivationLayer import ActivationLayer
+from Conv2DLayer import Conv2DLayer
 from HiddenLayer import HiddenLayer
 
 from theano.ifelse import ifelse
 from theano.tensor.shared_randomstreams import RandomStreams
 
-class LadderNetwork(object):
+class ConvLadderNetwork(object):
     """Implementation of the LadderNetwork as introduced in [1].
        Partially based on: https://github.com/rinuboney/ladder/
     
@@ -44,11 +45,12 @@ class LadderNetwork(object):
         self.params += sum([d_layer.params for d_layer in self.decoding_layers], [])
 
         # Used to seperate between labeled from unlabeled examples
-        self.labeled    = lambda x, y: x[T.nonzero(y)[0]]
-        self.unlabeled  = lambda x, y: x[T.nonzero(1.-T.sum(y, axis=1))]
-        self.split_data = lambda x, y: [self.labeled(x, y), self.unlabeled(x, y)]
-        # Check axis for convnets
-        self.join       = lambda x, y: T.concatenate([x, y], axis=0)
+        self.labeled     = lambda x, y: x[T.nonzero(y)[0]]
+        self.unlabeled   = lambda x, y: x[T.nonzero(1.-T.sum(y, axis=1))]
+#        self.unlabeled_y = lambda y: y[T.nonzero(1.-T.sum(y, axis=1))]
+        self.split_data  = lambda x, y: [self.labeled(x, y), self.unlabeled(x, y)]
+        # Where x, x2 must be of the same type
+        self.join        = lambda x, x2: T.concatenate([x, x2], axis=0)
 
         # Classification predictions
         self.predictions = None
@@ -57,23 +59,35 @@ class LadderNetwork(object):
         self.clean_z         = []
         self.reconstructions = []
 
-        self.n_units =  [l.output_units for l in self.encoding_layers if (hasattr(l, 'output_units'))]
+        self.n_units = [l.output_units for l in self.encoding_layers if (hasattr(l, 'output_units'))]
         # Dimensionality of the input
         self.n_units.insert(0, self.encoding_layers[0].input_units)
 
         def setToOne(a, idx):
-            a[:, idx] = 1.
+            a[..., idx] = 1.
             return theano.shared(value=a, borrow=True)
 
         # Concatentates a tuple and an integer, returns a list
         concat = lambda tup, i: list(tup) + [i]
 
         # Parameters needed to learn an optimal denoising function
-        self.A = [setToOne(np.zeros((concat(i[1:], 10)), dtype=theano.config.floatX), [0, 1, 5, 6]) for i in self.n_units[::-1]]
+        self.A       = [setToOne(np.zeros(concat(i[1:], 10), dtype=theano.config.floatX), [0, 1, 5, 6]) for i in self.n_units[::-1]]
+
+        # Used during the computation of the optimal denoising function
+        self.expand  = lambda A, o: A[:,:,:,o].dimshuffle('x', 0, 1, 2)
+
+        # The dimensions used to calculate the moments for different layers
+        self.mom_axes = [((0, 2, 3) if type(l) is Conv2DLayer else (0,)) for l in self.encoding_layers if (hasattr(l, 'output_units'))]
 
         # Parameters of trainable batchnorm layers
-        self.gamma = [theano.shared(value=np.ones(concat(i[1:], 10), dtype=theano.config.floatX), borrow=True) for i in self.n_units[1:]]
-        self.beta  = [theano.shared(value=np.zeros(concat(i[1:], 10), dtype=theano.config.floatX), borrow=True) for i in self.n_units[1:]]
+#        gamma_beta_shapes = [[(1 if si in self.mom_axes[shape_id] else s) for si, s in enumerate(shape)] for shape_id, shape in enumerate(self.n_units[1:])]
+        gamma_beta_shapes = []
+
+        for id, shape in enumerate(self.n_units[1:]):
+            gamma_beta_shapes.append([(1 if si in self.mom_axes[id] else s) for si,s in enumerate(shape)])
+                    
+        self.gamma = [theano.shared(value=np.ones(s, dtype=theano.config.floatX), borrow=True) for s in gamma_beta_shapes]
+        self.beta  = [theano.shared(value=np.zeros(s, dtype=theano.config.floatX), borrow=True) for s in gamma_beta_shapes]
 
         self.params += self.A
         self.params += self.gamma
@@ -85,16 +99,19 @@ class LadderNetwork(object):
            to split between labeled and unlabeled data points."""
         # 123, 127
         # Returns classification predictions and layerwise data
-        noisy_y, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
+#        noisy_y, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
+        noisy_y, noisy = self.fprop(input=input, output=output, sigma=0.0)
         # sigma = 0.0 -> no noise. Used to supply denoising targets
-        self.predictions, clean = self.fprop(input=input, output=output, sigma=0.0)
+#        self.predictions, clean = self.fprop(input=input, output=output, sigma=0.0)
+        self.predictions, clean = noisy_y, noisy
 
         # Decoder part of the denoising autoencoder, pass only unlabeled data
         self.inv(self.unlabeled(noisy_y, output), noisy['unlabeled'], clean['unlabeled'])
+#        self.inv(self.unlabeled_y(noisy_y, output), noisy['unlabeled'], clean['unlabeled'])
 
         # Used to calculate the unsupervised cost
-        self.clean_z = clean['unlabeled']['z_pre'].values()
-        self.reconstructions.reverse()
+#        self.clean_z = clean['unlabeled']['z_pre'].values()
+#        self.reconstructions.reverse()
 
         # predict with the clean version, calculate supervised cost with the noisy version
         return noisy_y
@@ -107,7 +124,7 @@ class LadderNetwork(object):
 
         return input
 
-    def batchnorm(self, input, mean=None, std=None, eps=1e-10):
+    def batchnorm(self, input, axes=None, mean=None, std=None, eps=1e-10):
         """
             Performs batch-normalisation as proposed in [2]. Does not implement
             the trainable part including beta, gamma. This is done in beta_gamma.
@@ -120,13 +137,18 @@ class LadderNetwork(object):
                 std dev. of the incoming batch. Will be caclulated if not provided.
             std : tensor
                 mean of the incoming batch. Will be caclulated if not provided.
-                
+            axes : tuple
+                The axes along which moments of the input are calulated
+            eps : float
+                A constant used to avoid divisions by zero
         """
         # TODO: eval/training
-        if (None == mean):
-            mean = input.mean(0)
-        if (None == std):
-            std  = input.std(0)
+        if (None == mean or None == std):
+            if (None == axes):
+                raise ValueError('No axes provided')
+
+            mean = input.mean(axes, keepdims=True)
+            std  = input.std(axes, keepdims=True)
 
         # Don't batchnoramlise a single data point
         mean = ifelse(T.gt(input.shape[0], 1), mean, T.zeros(mean.shape, dtype=mean.dtype))
@@ -155,6 +177,7 @@ class LadderNetwork(object):
         input = self.add_noise(input, sigma)
         # 78
         d['labeled']['z_pre'][0], d['unlabeled']['z_pre'][0] = self.split_data(input, output)
+        _, d['unlabeled']['z_pre'][0] = self.split_data(input, output)
 
         # Hidden layer id
         h_id = 0
@@ -164,21 +187,23 @@ class LadderNetwork(object):
                 l_input, u_input = self.split_data(input, output)
 
                 # 82
-                u_mean = u_input.mean(0)
-                u_std  = u_input.std(0)
+                u_mean = u_input.mean(self.mom_axes[h_id], keepdims=True)
+                u_std  = u_input.std(self.mom_axes[h_id], keepdims=True)
 
                 # Batch-normalise unlabeled and labeled examples seperatly 110/84-96
                 # 90-91
-                l_input = self.batchnorm(l_input)
-                u_input = self.batchnorm(u_input, u_mean, u_std)
+                l_input = self.batchnorm(l_input, axes=self.mom_axes[h_id])
+                u_input = self.batchnorm(u_input, axes=self.mom_axes[h_id], mean=u_mean, std=u_std)
+#                input = self.batchnorm(input, axes=self.mom_axes[h_id])
 
                 # 91
                 input = self.add_noise(self.join(l_input, u_input), sigma)
+#                input = self.add_noise(input, sigma)
                 # 114: TODO: ReLUs don't need beta, gamma
                 input = self.beta_gamma(input, h_id)
 
                 # Re-used during decoding (118-119)
-                d['labeled']['z_pre'][h_id+1]   = l_input 
+#                d['labeled']['z_pre'][h_id+1]   = l_input 
                 d['unlabeled']['z_pre'][h_id+1] = u_input
                 # statistics only for unlabeled examples 
                 d['unlabeled']['mean'][h_id+1] = u_mean
@@ -190,47 +215,69 @@ class LadderNetwork(object):
 
         return input, d
 
-    def compute_mu(self, input, A, offset=0):
+    def compute_mu(self, input, A, offset=0, conv=False):
         # Implements eq. (2) in [1] 
         o = offset
-        return A[:,0+o] * T.nnet.sigmoid(input*A[:,1+o] + A[:,2+o]) + input*A[:,3+o] + A[:,4+o]
 
-    def compute_v(self, input, A):
-        return self.compute_mu(input, A, offset=5)
+        if (conv):
+            rval = self.expand(A, 0+o) * T.nnet.sigmoid(input * self.expand(A, 1+o) + self.expand(A, 2+o)) + \
+                   input * self.expand(A, 3+o) + self.expand(A, 4+o)
+        else:
+            rval = A[:,0+o] * T.nnet.sigmoid(input*A[:,1+o] + A[:,2+o]) + input*A[:,3+o] + A[:,4+o]
+
+        return rval
+
+    def compute_v(self, input, A, conv=False):
+        return self.compute_mu(input, A, offset=5, conv=conv)
     
     def inv(self, noisy_y, u_noisy, u_clean):
         # Non batch-normalised estimates/resconstructions
         z_est = {}
 
+        u = noisy_y
+        n_g = np.sum([1 for l in self.decoding_layers if (type(l) is Conv2DLayer) or (type(l) is HiddenLayer)])
+        l_id = 0
+
         # decoding
-        for d_index in range(0, len(self.decoding_layers)+1): 
-            if (0 == d_index):
-                u = noisy_y
-            else:
-                u = self.decoding_layers[d_index-1].inv(z_est[d_index-1])
+        for d_index in xrange(0, len(self.decoding_layers) + 1):
 
-            u = self.batchnorm(u)
+            if(d_index > 0):
+#                u = d_layer.inv(z_est[d_index-1])
+                d_layer = self.decoding_layers[d_index-1]
+                u = d_layer.inv(u)
 
-            # Computations performed in the encoder
-            id = len(self.n_units) - d_index - 1
-            noisy_z = u_noisy['z_pre'][id]
-            mean    = u_clean['mean'].get(id, None)
-            std     = u_clean['std'].get(id, None)
+            if ((d_index == 0) or (type(d_layer) is Conv2DLayer) or 
+                                  (type(d_layer) is HiddenLayer)):
 
-            # Add pre-activations from corresponding layer in the encoder
-            z_est[d_index] = self.skip_connect(u, noisy_z, d_index)
+                if (d_index == 0):
+                    axes = (0,)
+                else:
+                    axes = self.mom_axes[n_g]
 
-            # Used to calculate the denoising cost
-            self.reconstructions.append(self.batchnorm(z_est[d_index], mean, std))
+                u = self.batchnorm(u, axes)
+                conv = True if (len(axes) > 1) else False
 
-    def skip_connect(self, u, noisy_z, d_index):
+                # Computations performed in the encoder
+                noisy_z = u_noisy['z_pre'][n_g]
+                mean    = u_clean['mean'].get(n_g, None)
+                std     = u_clean['std'].get(n_g, None)
+
+                # Add pre-activations from corresponding layer in the encoder
+                z_est[l_id] = self.skip_connect(u, noisy_z, l_id, conv)
+                u = z_est[l_id]
+
+                # Used to calculate the denoising cost
+                self.reconstructions.append(self.batchnorm(z_est[l_id], axes=axes, mean=mean, std=std))
+                l_id += 1
+                n_g  -= 1
+
+    def skip_connect(self, u, noisy_z, d_index, conv):
         """ Implements the skip connections (g-function) in [1] eq. (2).
             These skip-connections release the pressure for higher layer to represent
             all information necessary for decoding.
         """
-
-        mu = self.compute_mu(u, self.A[d_index])
-        v  = self.compute_v(u, self.A[d_index])
+        mu = self.compute_mu(u, self.A[d_index], conv)
+        v  = self.compute_v(u, self.A[d_index], conv)
 
         z_est = (noisy_z - mu) * v + mu
 
