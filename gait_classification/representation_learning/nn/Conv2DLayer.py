@@ -1,8 +1,8 @@
 import numpy as np
 import theano
 import theano.tensor as T
+
 from theano.tensor.nnet import conv
-from theano.tensor.shared_randomstreams import RandomStreams
 
 class Conv2DLayer(object):
 
@@ -14,8 +14,6 @@ class Conv2DLayer(object):
         # Not counting the bachsize
         self.input_units = self.input_shape[1:]
         self.output_units = self.output_shape[1:]
-
-        self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         
         fan_in = np.prod(filter_shape[1:])
         fan_out = filter_shape[0] * np.prod(filter_shape[2:])
@@ -74,5 +72,3 @@ class Conv2DLayer(object):
         np.savez_compressed(filename,
             W=np.array(self.W.eval()),
             b=np.array(self.b.eval()))
-        
-        
