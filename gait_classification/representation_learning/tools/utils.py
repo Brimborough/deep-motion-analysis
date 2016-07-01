@@ -222,6 +222,11 @@ def fair_split(rng, data, one_hot_labels, proportions):
     This can be important in classificaton, for instance
     """
 
+    if (len(proportions) == 1):
+        return [(data, one_hot_labels)]
+    if (np.sum(proportions) != 1.0):
+        raise ValueError('Proportions must sum up to one.')
+
     n_classes = one_hot_labels.shape[1]
     n_instances_per_class = np.sum(one_hot_labels, axis=0).astype(int)
     n_splits = len(proportions)
@@ -251,6 +256,40 @@ def fair_split(rng, data, one_hot_labels, proportions):
 
     return datasets
 
+def random_split(rng, data, one_hot_labels, proportions):
+    """
+    Splits a dataset in parts given by the percentage in proportions. This split is done
+    in a way that ensures the original balance between classes in every part.
+    This can be important in classificaton, for instance
+    """
+
+    if (len(proportions) == 1): 
+        return [(data, one_hot_labels)] 
+    if (np.sum(proportions) != 1.0):
+        raise ValueError('Proportions must sum up to one.')
+
+    n_datapoints = data.shape[0]
+    proportions = np.cumsum(proportions)
+
+    # Random split
+    shuffled = (zip(data, one_hot_labels))
+    rng.shuffle(shuffled)
+    X, Y = map(np.array, zip(*shuffled))
+    datasets = []
+    split_idx = [0]
+
+    for split in proportions:
+        split_idx.append(int(split * n_datapoints))
+
+    # In case of uneven splits
+    split_idx[0] += n_datapoints - (split_idx[-1])
+
+    for sid in xrange(1, len(split_idx)):
+        datasets.append((X[split_idx[sid-1]:split_idx[sid]], 
+                         Y[split_idx[sid-1]:split_idx[sid]]))
+
+    return datasets
+
 def load_styletransfer(rng, split):
 
     print('... loading data')
@@ -275,13 +314,42 @@ def load_styletransfer(rng, split):
 
     Xstd[np.where(Xstd == 0)] = 1
 
-    X = (X - Xmean) / Xstd
+    X = (X - Xmean) / (Xstd + 1e-10)
 
     # Motion labels in one-hot vector format
     Y = np.load('../data/styletransfer_motions_one_hot.npz')['one_hot_vectors']
 
     datasets = fair_split(rng, X, Y, split)
     return datasets
+
+def load_cmu(rng):
+
+    print('... loading data')
+
+    data = np.load('../data/data_cmu.npz')
+
+    clips = data['clips']
+
+    clips = np.swapaxes(clips, 1, 2)
+    X = clips[:,:-4].astype(theano.config.floatX)
+
+    Xmean = X.mean(axis=2).mean(axis=0)[np.newaxis,:,np.newaxis]
+    Xmean[:,-3:] = 0.0
+
+    Xstd = np.array([[[X.std()]]]).repeat(X.shape[1], axis=1)
+    Xstd[:,-3:-1] = X[:,-3:-1].std()
+    Xstd[:,-1:  ] = X[:,-1:  ].std()
+
+    Xstd[np.where(Xstd == 0)] = 1
+
+    X = (X - Xmean) / (Xstd + 1e-10)
+
+    # Randomise data
+    I = np.arange(len(X))
+    rng.shuffle(I); 
+    X = X[I]
+
+    return [(X,)]
 
 def load_mnist(rng):
     ''' Loads the MNIST dataset
@@ -361,7 +429,7 @@ def load_mnist(rng):
     datasets = [train_set, valid_set, test_set]
     return datasets
 
-def load_dsg(rng, split):
+def load_dsg(rng, split, fair=True):
 
     print('... loading data')
 
@@ -371,16 +439,25 @@ def load_dsg(rng, split):
     X      = train_data['x'].astype(theano.config.floatX) 
     x_test = test_data['x'].astype(theano.config.floatX) 
 
+    train_instances = X.shape[0]
+
     X = np.concatenate((X, x_test), axis=0).swapaxes(1,3)
     # Normalise using the moments estimated from both training and test data
     X = (X - X.mean((0,2,3), keepdims=True)) / (X.std((0,2,3), keepdims=True) + 1e-10)
-    X = X[:8000, ...]
-    x_test = X[8000:, ...]
+
+    x_train = X[:train_instances]
+    x_test  = X[train_instances:]
+    # Dirty hack to get around the batchsize bug
+    x_test  = np.concatenate((x_test, x_test[-1:]), axis=0)
 
     Y = train_data['t'] 
     one_hot_labels = np.eye(4)[Y - 1]
 
-    datasets = fair_split(rng, X, one_hot_labels, split)
+    if (fair):
+        datasets = fair_split(rng, x_train, one_hot_labels, split)
+    else:
+        datasets = random_split(rng, x_train, one_hot_labels, split)
+
     datasets.append((x_test,))
 
     return datasets
