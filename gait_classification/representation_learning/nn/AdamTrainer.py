@@ -6,7 +6,6 @@ import theano.tensor as T
 
 from datetime import datetime
 from LadderNetwork import LadderNetwork
-from theano.tensor.shared_randomstreams import RandomStreams
 
 # To split between labeld & unlabeled examples
 labeled    = lambda X, Y: X[T.nonzero(Y)[0]]
@@ -15,7 +14,7 @@ split_data = lambda X, Y: [labeled(X, Y), unlabeled(X, Y)]
 join       = lambda X, Y: T.concatenate([X, Y], axis=0)
 
 # Classification predictions
-pred      = lambda Y: T.argmax(Y, axis=1)
+pred       = lambda Y: T.argmax(Y, axis=1)
 
 class AdamTrainer(object):
     
@@ -27,7 +26,6 @@ class AdamTrainer(object):
         self.l1_weight = l1_weight
         self.l2_weight = l2_weight
         self.rng = rng
-        self.theano_rng = RandomStreams(rng.randint(2 ** 30))
         self.epochs = epochs
         self.batchsize = batchsize
 
@@ -37,8 +35,6 @@ class AdamTrainer(object):
         # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
         if   cost == 'mse':
             self.y_pred = lambda network, x: network(x)
-#            self.error = lambda network, y_pred, y: T.zeros((1,))
-#            self.error = lambda network, x, y: T.mean((network(x)[T.nonzero(y)] - y[T.nonzero(y)]**2))
             self.error = lambda network, x, y: T.mean((network(x) - y)**2)
             self.cost  = lambda network, x, y: T.mean((network(x) - y)**2)
         elif cost == 'binary_cross_entropy':
@@ -89,6 +85,11 @@ class AdamTrainer(object):
                    [(self.t, self.t+1)])
 
         return (cost, updates, error)
+
+    def get_predictions(self, network, input):
+
+        y_pred = pred(self.y_pred(network, input)) + 1
+        return y_pred
         
     def train(self, network, train_input, train_output,
                              valid_input=None, valid_output=None,
@@ -129,11 +130,14 @@ class AdamTrainer(object):
 
         test_func = None
         if (test_input):
+            # TODO: Full batch evaluation impossible for ConvNets
+            test_batchsize = self.batchsize
+
             # Full batch evaluation
-            test_func = theano.function(inputs=[],
+            test_func = theano.function(inputs=[index],
                                         outputs=[cost, error],
-                                        givens={input:test_input,
-                                                output:test_output,},
+                                        givens={input:test_input[index*test_batchsize:(index+1)*test_batchsize],
+                                                output:test_output[index*test_batchsize:(index+1)*test_batchsize],},
                                         allow_input_downcast=True)
 
         ###############
@@ -141,8 +145,9 @@ class AdamTrainer(object):
         ###############
         print('... training')
         
-        best_valid_error = 1.
         best_epoch = 0
+        best_train_error = 1.
+        best_valid_error = 1.
 
         last_tr_mean = 0.
 
@@ -174,28 +179,39 @@ class AdamTrainer(object):
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
 
-            valid_batchinds = np.arange(valid_input.shape.eval()[0] // self.batchsize)
+            sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f %s\n' % 
+                (epoch, curr_tr_mean * 100., diff_tr_mean * 100., str(datetime.now())[11:19]))
 
-            vl_errors = []
-            for bii, bi in enumerate(valid_batchinds):
-                vl_cost, vl_error = valid_func(bi)
-                vl_errors.append(vl_error)
+            if (valid_func):
+                valid_batchinds = np.arange(valid_input.shape.eval()[0] // self.batchsize)
 
-            valid_error = np.mean(vl_errors)
-            valid_diff = valid_error - best_valid_error
+                vl_errors = []
+                for bii, bi in enumerate(valid_batchinds):
+                    vl_cost, vl_error = valid_func(bi)
+                    vl_errors.append(vl_error)
 
-            sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
-                (epoch, curr_tr_mean * 100., diff_tr_mean * 100., valid_error * 100., valid_diff * 100., str(datetime.now())[11:19]))
+                valid_error = np.mean(vl_errors)
+                valid_diff = valid_error - best_valid_error
+
+                sys.stdout.write('\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f validation error: %.5f validation diff: %.5f %s\n' % 
+                    (epoch, curr_tr_mean * 100., diff_tr_mean * 100., valid_error * 100., valid_diff * 100., str(datetime.now())[11:19]))
+
             sys.stdout.flush()
 
-            # if we got the best validation score until now
-            if valid_error < best_valid_error:
+            # Early stopping
+            if (valid_func and (valid_error < best_valid_error)):
                 best_valid_error = valid_error
                 best_epoch = epoch
 
                 # Only save the model if the validation error improved
                 # TODO: Don't add time needed to save model to training time
                 network.save(filename)
+            elif (curr_tr_mean < best_train_error):
+                best_train_error = curr_tr_mean
+                best_epoch = epoch
+                network.save(filename)
+            else:
+                pass
 
         end_time = timeit.default_timer()
 
@@ -204,15 +220,53 @@ class AdamTrainer(object):
         sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
         sys.stdout.flush()
 
-        ####################
-        # Final Validation #
-        ####################
-#        print('... testing the model')
+        if (test_func):
+            ####################
+            # Final Validation #
+            ####################
 
-#        test_cost, test_error = test_func()
-#
-#        sys.stdout.write(('Test set performance: %f %%\n') % (test_error * 100.))
-#        sys.stdout.flush()
+            # Resetting to the parameters with the best validation performance
+            network.load(filename)
+
+            print('... testing the model')
+
+            ts_batchinds = np.arange(test_input.shape.eval()[0] // self.batchsize)
+            ts_errors = []
+            for bii, bi in enumerate(ts_batchinds):
+                test_cost, test_error = test_func(bi)
+                ts_errors.append(test_error)
+
+            test_error = np.mean(vl_errors)
+
+            sys.stdout.write(('Test set performance: %f %%\n') % (test_error * 100.))
+            sys.stdout.flush()
+
+    def predict(self, network, test_input, filename):
+        input = test_input.type()
+        index = T.lscalar()
+        
+        predictions = self.get_predictions(network, input)
+
+        # TODO: Full batch evaluation
+        pred_batchsize = self.batchsize
+        pred_func = theano.function(inputs=[index],
+                                    outputs=[predictions],
+                                    givens={input:test_input[index*pred_batchsize:(index+1)*pred_batchsize]},
+                                    allow_input_downcast=True)
+
+        #####################
+        # Predicting labels #
+        #####################
+
+        print('... predicting for new input')
+
+        pred_batchinds = np.arange(test_input.shape.eval()[0] // pred_batchsize)
+
+        test_output = []
+        for bii, bi in enumerate(pred_batchinds):
+            test_output.append(pred_func(bi))
+
+        np.savez_compressed(filename, test_output=np.array(test_output).flatten())
 
 class LadderAdamTrainer(AdamTrainer):
     """
