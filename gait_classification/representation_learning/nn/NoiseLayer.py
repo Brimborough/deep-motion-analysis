@@ -23,8 +23,9 @@ class NoiseLayer(object):
         
     def load(self, filename): pass
     def save(self, filename): pass
+    def reset(self): pass
         
-class GaussianNoiseLayer(object):
+class GaussianNoiseLayer(NoiseLayer):
 
     def __init__(self, rng, sigma=1.0):
         self.sigma = sigma
@@ -37,9 +38,3 @@ class GaussianNoiseLayer(object):
                 size=input.shape, dtype=theano.config.floatX))
         else:
             return input
-        
-    def inv(self, output):
-        return output
-        
-    def load(self, filename): pass
-    def save(self, filename): pass

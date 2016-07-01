@@ -14,4 +14,4 @@ class ReshapeLayer(object):
         
     def load(self, filename): pass
     def save(self, filename): pass
-        
+    def reset(self): pass

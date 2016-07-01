@@ -56,3 +56,8 @@ class BatchNormLayer(object):
         np.savez_compressed(filename,
             beta=np.array(self.beta.eval()),
             gamma=np.array(self.gamma.eval()))
+
+    def reset(self): 
+        self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
+        self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
+        self.params = [self.beta, self.gamma]

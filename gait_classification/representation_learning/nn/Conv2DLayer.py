@@ -11,19 +11,22 @@ class Conv2DLayer(object):
         self.filter_shape = filter_shape
         self.input_shape = input_shape
         self.output_shape = (input_shape[0], filter_shape[0], input_shape[2], input_shape[3])
+
         # Not counting the bachsize
         self.input_units = self.input_shape
         self.output_units = self.output_shape
 
         fan_in = np.prod(filter_shape[1:])
         fan_out = filter_shape[0] * np.prod(filter_shape[2:])
+
+        self.rng = rng
         
-        W_bound = scale * np.sqrt(6. / (fan_in + fan_out))
+        self.W_bound = scale * np.sqrt(6. / (fan_in + fan_out))
         W = np.asarray(
-                rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
+                self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.filter_shape),
                 dtype=theano.config.floatX)
         
-        b = np.zeros((filter_shape[0],), dtype=theano.config.floatX)
+        b = np.zeros((self.filter_shape[0],), dtype=theano.config.floatX)
         
         self.W = theano.shared(value=W, borrow=True)
         self.b = theano.shared(value=b, borrow=True)
@@ -72,3 +75,14 @@ class Conv2DLayer(object):
         np.savez_compressed(filename,
             W=np.array(self.W.eval()),
             b=np.array(self.b.eval()))
+
+    def reset(self):
+        W = np.asarray(
+                self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=filter_shape),
+                dtype=theano.config.floatX)
+        
+        b = np.zeros((self.filter_shape[0],), dtype=theano.config.floatX)
+
+        self.W = theano.shared(value=W, borrow=True)
+        self.b = theano.shared(value=b, borrow=True)
+        self.params = [self.W, self.b]

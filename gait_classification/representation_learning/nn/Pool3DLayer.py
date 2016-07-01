@@ -62,3 +62,4 @@ class Conv3DLayer:
         
     def load(self, filename): pass
     def save(self, filename): pass
+    def reset(self): pass

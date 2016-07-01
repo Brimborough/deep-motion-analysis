@@ -21,4 +21,4 @@ class VariationalLayer(object):
     def inv(self, output): pass
     def load(self, filename): pass
     def save(self, filename): pass
-    
+    def reset(self): pass

@@ -44,10 +44,10 @@ class AdamTrainer(object):
             # classification error (taking into account only training examples with labels)
             self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         elif cost == 'cross_entropy':
-            self.y_pred = lambda network, x: network(x)
-            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
-            # classification error (taking into account only training examples with labels)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
+                self.y_pred = lambda network, x: network(x)
+                self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
+                # classification error (taking into account only training examples with labels)
+                self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         else:
             self.y_pred = lambda network, x: network(x)
             self.error  = lambda network, y_pred, y: T.zeros((1,))
@@ -105,8 +105,8 @@ class AdamTrainer(object):
         y_pred = pred(self.y_pred(network, input)) + 1
         return y_pred
 
-    def create_eval_func(self, network=None, batchsize=None, eval_input=None, eval_output=None):
-        if (None in [network, batchsize, eval_input, eval_output]):
+    def create_eval_func(self, network=None, eval_input=None, eval_output=None):
+        if (None in [network, eval_input]):
             # Equivalent to not defining the function
             return None
 
@@ -118,12 +118,9 @@ class AdamTrainer(object):
         e_cost, e_error = self.get_eval_cost_error(network, e_input, e_output)
 
         func = theano.function(inputs=[e_index],
-#        func = theano.function(inputs=[],
                                outputs=[e_cost, e_error],
-                               givens={e_input:eval_input[e_index*batchsize:(e_index+1)*batchsize],
-                                       e_output:eval_output[e_index*batchsize:(e_index+1)*batchsize],},
-#                               givens={e_input:eval_input,
-#                                       e_output:eval_output,},
+                               givens={e_input:eval_input[e_index*self.batchsize:(e_index+1)*self.batchsize],
+                                       e_output:eval_output[e_index*self.batchsize:(e_index+1)*self.batchsize],},
                                allow_input_downcast=True)
 
         return func
@@ -154,8 +151,8 @@ class AdamTrainer(object):
                                              output:train_output[index*self.batchsize:(index+1)*self.batchsize],}, 
                                      allow_input_downcast=True)
 
-        valid_func = self.create_eval_func(network=network, batchsize=self.batchsize, eval_input=valid_input, eval_output=valid_output)
-        test_func = self.create_eval_func(network=network, batchsize=self.batchsize, eval_input=test_input, eval_output=test_output)
+        valid_func = self.create_eval_func(network=network, eval_input=valid_input, eval_output=valid_output)
+        test_func = self.create_eval_func(network=network, eval_input=test_input, eval_output=test_output)
 
         ###############
         # TRAIN MODEL #
@@ -224,13 +221,13 @@ class AdamTrainer(object):
                 # TODO: Don't add time needed to save model to training time
                 network.save(filename)
 
-                result_str = 'Optimization complete. Best validation error of %f %% obtained at epoch %i\n' % (best_valid_error * 100., best_epoch + 1)
+                result_str = 'Optimization complete. Best validation error of %.2f %% obtained at epoch %i\n' % (best_valid_error * 100., best_epoch + 1)
             elif (curr_tr_mean < best_train_error):
                 best_train_error = curr_tr_mean
                 best_epoch = epoch
 
                 network.save(filename)
-                result_str = 'Optimization complete. Best train error of %f %% obtained at epoch %i\n' % (best_train_error * 100., best_epoch + 1)
+                result_str = 'Optimization complete. Best train error of %.2f %% obtained at epoch %i\n' % (best_train_error * 100., best_epoch + 1)
             else:
                 pass
 
@@ -256,9 +253,9 @@ class AdamTrainer(object):
                 test_cost, test_error = test_func(bi)
                 ts_errors.append(test_error)
 
-            test_error = np.mean(vl_errors)
+            test_error = np.mean(ts_errors)
 
-            sys.stdout.write(('Test set performance: %f %%\n') % (test_error * 100.))
+            sys.stdout.write(('Test set performance: %.2f %%\n') % (test_error * 100.))
             sys.stdout.flush()
 
     def predict(self, network, test_input, filename):
@@ -287,6 +284,10 @@ class AdamTrainer(object):
             test_output.append(pred_func(bi))
 
         np.savez_compressed(filename, test_output=np.array(test_output).flatten())
+
+    def set_params(self, alpha=0.001, beta1=0.9, beta2=0.999, l1_weight=0.0, l2_weight=0.1):
+        alpha=alpha; beta1=beta1; beta2=beta2; l1_weight=l1_weight
+        l2_weight=l2_weight
 
 #class LadderAdamTrainer(AdamTrainer):
 #    """

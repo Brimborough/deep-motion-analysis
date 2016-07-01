@@ -2,23 +2,21 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from theano.tensor.shared_randomstreams import RandomStreams
-
 class HiddenLayer(object):
 
     def __init__(self, rng, weights_shape, W=None, b=None):
         
-        self.theano_rng = RandomStreams(rng.randint(2 ** 30))
+        self.weights_shape = weights_shape
         
         if W is None:
             # TODO: W_bound depends on the activation function
-            W_bound = np.sqrt(6. / np.prod(weights_shape))
+            self.W_bound = np.sqrt(6. / np.prod(weights_shape))
             W = np.asarray(
-                rng.uniform(low=-W_bound, high=W_bound, size=weights_shape),
+                rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
                 dtype=theano.config.floatX)
         
         if b is None:
-            b = np.zeros((weights_shape[1],), dtype=theano.config.floatX)
+            b = np.zeros((self.weights_shape[1],), dtype=theano.config.floatX)
 
         self.input_units = (W.shape)
         self.output_units = (W.shape)
@@ -47,4 +45,14 @@ class HiddenLayer(object):
             W=np.array(self.W.eval()),
             b=np.array(self.b.eval()))
         
+    def reset(self):
+        W = np.asarray(
+            rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
+            dtype=theano.config.floatX)
         
+        b = np.zeros((self.weights_shape[1],), dtype=theano.config.floatX)
+
+        self.W = theano.shared(value=W, borrow=True)
+        self.b = theano.shared(value=b, borrow=True)
+        
+        self.params = [self.W, self.b]
