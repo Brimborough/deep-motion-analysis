@@ -10,6 +10,7 @@ import pickle
 import gzip
 import numpy as np
 import os
+import sys
 import theano
 import theano.tensor as T
 
@@ -292,7 +293,7 @@ def random_split(rng, data, one_hot_labels, proportions):
 
 def load_styletransfer(rng, split):
 
-    print('... loading data')
+    sys.stdout.write('... loading data\n')
 
     data = np.load('../data/data_styletransfer.npz')
 
@@ -324,7 +325,7 @@ def load_styletransfer(rng, split):
 
 def load_cmu(rng):
 
-    print('... loading data')
+    sys.stdout.write('... loading data\n')
 
     data = np.load('../data/data_cmu.npz')
 
@@ -378,10 +379,10 @@ def load_mnist(rng):
         origin = (
             'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
         )
-        print('Downloading data from %s' % origin)
+        sys.stdout.write(('Downloading data from %s\n') % origin)
         urllib.request.urlretrieve(origin, dataset)
 
-    print('... loading data')
+    sys.stdout.write('... loading data\n')
 
     # Load the dataset
     with gzip.open(dataset, 'rb') as f:
@@ -431,7 +432,7 @@ def load_mnist(rng):
 
 def load_dsg(rng, split, fair=True):
 
-    print('... loading data')
+    sys.stdout.write('... loading data\n')
 
     train_data = np.load('../data/dsg/train.npz')
     test_data  = np.load('../data/dsg/test.npz')

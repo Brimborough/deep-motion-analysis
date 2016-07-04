@@ -7,12 +7,13 @@ class HiddenLayer(object):
     def __init__(self, rng, weights_shape, W=None, b=None):
         
         self.weights_shape = weights_shape
+        self.rng = rng
         
         if W is None:
             # TODO: W_bound depends on the activation function
-            self.W_bound = np.sqrt(6. / np.prod(weights_shape))
+            self.W_bound = np.sqrt(6. / np.prod(self.weights_shape))
             W = np.asarray(
-                rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
+                self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
                 dtype=theano.config.floatX)
         
         if b is None:
@@ -47,7 +48,7 @@ class HiddenLayer(object):
         
     def reset(self):
         W = np.asarray(
-            rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
+            self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.weights_shape),
             dtype=theano.config.floatX)
         
         b = np.zeros((self.weights_shape[1],), dtype=theano.config.floatX)

@@ -78,7 +78,7 @@ class Conv2DLayer(object):
 
     def reset(self):
         W = np.asarray(
-                self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=filter_shape),
+                self.rng.uniform(low=-self.W_bound, high=self.W_bound, size=self.filter_shape),
                 dtype=theano.config.floatX)
         
         b = np.zeros((self.filter_shape[0],), dtype=theano.config.floatX)
