@@ -7,6 +7,7 @@ import theano.tensor as T
 from datetime import datetime
 from ConvLadderNetwork import ConvLadderNetwork
 from LadderNetwork import LadderNetwork
+from Param import Param
 
 # To split between labeld & unlabeled examples
 labeled    = lambda X, Y: X[T.nonzero(Y)[0]]
@@ -56,10 +57,10 @@ class AdamTrainer(object):
     def l1_regularization(self, network, target=0.0):
         # The if term ensures we do not regularise biases
         # TODO: This will cause problems for a single output unit, fix this
-        return sum([T.mean(abs(p - target)) for p in network.params])# if (len(p.shape.eval()) > 1)])
+        return sum([T.mean(abs(p.value - target)) for p in network.params if (p.regularisable == True)])
 
     def l2_regularization(self, network, target=0.0):
-        return sum([T.mean((p - target)**2) for p in network.params])# if (len(p.shape.eval()) > 1)])
+        return sum([T.mean((p.value - target)**2) for p in network.params if (p.regularisable == True)])
         
     def get_cost_updates(self, network, input, output):
         
@@ -72,15 +73,17 @@ class AdamTrainer(object):
             # Only meaningful in classification
             error = self.error(network, y_pred, output)
         
-        gparams = T.grad(cost, self.params)
+        param_values = [p.value for p in self.params]
+
+        gparams = T.grad(cost, param_values)
         m0params = [self.beta1 * m0p + (1-self.beta1) *  gp     for m0p, gp in zip(self.m0params, gparams)]
         m1params = [self.beta2 * m1p + (1-self.beta2) * (gp*gp) for m1p, gp in zip(self.m1params, gparams)]
         params = [p - self.alpha * 
                   ((m0p/(1-(self.beta1**self.t[0]))) /
             (T.sqrt(m1p/(1-(self.beta2**self.t[0]))) + self.eps))
-            for p, m0p, m1p in zip(self.params, m0params, m1params)]
+            for p, m0p, m1p in zip(param_values, m0params, m1params)]
         
-        updates = ([( p,  pn) for  p,  pn in zip(self.params, params)] +
+        updates = ([( p,  pn) for  p,  pn in zip(param_values, params)] +
                    [(m0, m0n) for m0, m0n in zip(self.m0params, m0params)] +
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
@@ -154,8 +157,10 @@ class AdamTrainer(object):
         """
         
         self.params = network.params
-        self.m0params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
-        self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
+        param_values = [p.value for p in self.params]
+
+        self.m0params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in param_values]
+        self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in param_values]
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
 
 

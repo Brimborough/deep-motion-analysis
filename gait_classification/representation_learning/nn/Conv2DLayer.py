@@ -2,6 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+from Param import Param
 from theano.tensor.nnet import conv
 
 class Conv2DLayer(object):
@@ -30,7 +31,7 @@ class Conv2DLayer(object):
         
         self.W = theano.shared(value=W, borrow=True)
         self.b = theano.shared(value=b, borrow=True)
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]
     
     def __call__(self, input):
         

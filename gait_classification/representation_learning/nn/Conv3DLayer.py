@@ -6,6 +6,7 @@ import theano
 import theano.tensor.nnet.conv3d2d
 import theano.tensor as T
 
+from Param import Param
 from theano.tensor.shared_randomstreams import RandomStreams
 
 class Conv3DLayer:

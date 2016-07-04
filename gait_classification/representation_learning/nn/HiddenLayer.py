@@ -2,6 +2,8 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+from Param import Param
+
 class HiddenLayer(object):
 
     def __init__(self, rng, weights_shape, W=None, b=None):
@@ -25,7 +27,7 @@ class HiddenLayer(object):
         self.W = theano.shared(value=W, borrow=True)
         self.b = theano.shared(value=b, borrow=True)
         
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]
         
     def __call__(self, input):
         return input.dot(self.W) + self.b
