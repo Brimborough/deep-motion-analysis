@@ -3,6 +3,7 @@ import theano
 import theano.tensor as T
 
 from theano.ifelse import ifelse
+from Param import Param
 
 class BatchNormLayer(object):
     """
@@ -28,7 +29,8 @@ class BatchNormLayer(object):
         self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
         self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
         self.epsilon = epsilon
-        self.params = [self.beta, self.gamma]
+
+        self.params = [Param(self.beta, False), Param(self.gamma, False)]
         
     def __call__(self, input): 
         mean = input.mean(self.axes, keepdims=True) 
