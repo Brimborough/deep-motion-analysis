@@ -41,7 +41,7 @@ class Conv3DLayer:
             
         self.W = theano.shared(value=W)
         self.b = theano.shared(value=b)
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]
         
     def pad(self, input, i):
         f = self.filter_shape
@@ -94,4 +94,4 @@ class Conv3DLayer:
             
         self.W = theano.shared(value=W)
         self.b = theano.shared(value=b)
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]

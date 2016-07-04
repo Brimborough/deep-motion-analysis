@@ -58,4 +58,4 @@ class HiddenLayer(object):
         self.W = theano.shared(value=W, borrow=True)
         self.b = theano.shared(value=b, borrow=True)
         
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]

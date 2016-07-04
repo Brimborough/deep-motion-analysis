@@ -33,10 +33,8 @@ class HyperParamOptimiser(object):
 
     def optimise(self, network, trainer, train_input, train_output,
                        valid_input=None, valid_output=None,
-                       test_input=None, test_output=None, filename=None, logging=False):
-
-        # TODO: The optimiser ought to ensure that the weights are intialised exactly
-        # the same way for each iteration so as to not tempt the user to draw false conclusions
+                       test_input=None, test_output=None, filename=None, logging=False,
+                       random=False):
 
         size = (self.iterations,)
 
@@ -48,22 +46,41 @@ class HyperParamOptimiser(object):
         l1_samples    = self.rng.uniform(low=self.l1_range[0], high=self.l1_range[1], size=size)
         l2_samples    = self.rng.uniform(low=self.l2_range[0], high=self.l2_range[1], size=size)
 
+        # Variables for each iteration
+        model    = network
+        rng_copy = deepcopy(trainer.rng)
+
         best_model_params = {}
 
         start_time = timeit.default_timer()
         best_model_performance = 1.
 
         for i in xrange(self.iterations):
-            network_copy = deepcopy(network)
+            if (not random):
+                # Ensure equal training conditions (Same starting weights, etc.)
+                model       = deepcopy(network)
+                model.rng   = deepcopy(rng_copy)
+                trainer.rng = deepcopy(rng_copy)
+            else:
+#                TODO: resetting doesn't work for some reason, fix this
+#                model.reset()
+                pass
+
             trainer.set_params(alpha=alpha_samples[i], beta1=beta1_samples[i], 
                                beta2=beta2_samples[i], l1_weight=l1_samples[i], 
                                l2_weight=l2_samples[i])
 
-            model_performance = trainer.train(network=network_copy, train_input=train_input, train_output=train_output,
+            sys.stdout.write('\r[Model %i] alpha: %.5f\n' % (i+1, alpha_samples[i]))
+            sys.stdout.write('\r[Model %i] beta1: %.5f\n' % (i+1, beta1_samples[i]))
+            sys.stdout.write('\r[Model %i] beta1: %.5f\n' % (i+1, beta2_samples[i]))
+            sys.stdout.write('\r[Model %i] l1_weight: %.5f\n' % (i+1, l1_samples[i]))
+            sys.stdout.write('\r[Model %i] l2_weight: %.5f\n' % (i+1, l2_samples[i]))
+
+            model_performance = trainer.train(network=model, train_input=train_input, train_output=train_output,
                                               valid_input=valid_input, valid_output=valid_output,
                                               test_input=test_input, test_output=test_output, logging=logging)
             
-            sys.stdout.write('\r[Model %i] performance: %.5f\n' % (i+1, model_performance))
+            sys.stdout.write('\r[Model %i] performance: %.5f\n\n' % (i+1, model_performance))
             sys.stdout.flush()
 
             if (model_performance < best_model_performance):
@@ -76,13 +93,10 @@ class HyperParamOptimiser(object):
                 best_model_performance = model_performance
 
                 # Only keep the best model
-#                network.save(filename)
-
-#            TODO: resetting doesn't work for some reason, fix this
-#            network.reset()
+                model.save(filename)
 
         end_time = timeit.default_timer()
 
-        sys.stdout.write('Optimisation complete. Best model achieves a performance of %.2f %%\n' % (best_model_performance))
+        sys.stdout.write('Optimisation complete. Best model achieves a performance of %.3f %%\n' % (best_model_performance))
         sys.stdout.write(('Optimisation took %.2fm\n' % ((end_time - start_time) / 60.)))
         sys.stdout.flush()

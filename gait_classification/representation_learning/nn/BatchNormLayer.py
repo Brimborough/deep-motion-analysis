@@ -62,4 +62,5 @@ class BatchNormLayer(object):
     def reset(self): 
         self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
         self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
-        self.params = [self.beta, self.gamma]
+
+        self.params = [Param(self.beta, False), Param(self.gamma, False)]
