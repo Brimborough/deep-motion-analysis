@@ -1,6 +1,7 @@
 # Data sets
 ###################
 *.npz
+*.pkl.gz
 *.arff
 
 # Models
