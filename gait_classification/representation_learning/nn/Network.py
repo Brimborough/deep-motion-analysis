@@ -15,10 +15,18 @@ class Network(object):
     def __call__(self, input):
         for layer in self.layers: input = layer(input)
         return input
+
+    def get_hidden(self, input, depth):
+        for i in xrange(depth+1): input = self.layers[i](input)
+        return input
     
     def inv(self, output):
         for layer in self.layers[::-1]: output = layer.inv(output)
         return output
+
+    def set_layers(self, layers):
+        self.layers = layers
+        self.params = sum([layer.params for layer in self.layers], [])
     
     def save(self, filename):
         if filename is None: return
@@ -51,6 +59,10 @@ class InverseNetwork(object):
         
         
 class AutoEncodingNetwork(object):
+    """ Represents a deep autoencoder, i.e. the network
+        is trained to reconstruct its input using all layers.
+        this is contrary to stacked autoencoders, for instance.
+    """
 
     def __init__(self, network):
         self.network = network

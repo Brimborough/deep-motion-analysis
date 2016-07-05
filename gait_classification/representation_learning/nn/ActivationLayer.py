@@ -39,8 +39,11 @@ class ActivationLayer(object):
         
         self.params = [] if params is None else params
         
-    def __call__(self, input): return self.f(input)
-    def inv(self, output): return self.g(output)
+    def __call__(self, input): 
+        return self.f(input)
+
+    def inv(self, output): 
+        return self.g(output)
         
     def load(self, filename): pass
     def save(self, filename): pass

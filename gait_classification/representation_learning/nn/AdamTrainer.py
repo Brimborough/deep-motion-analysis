@@ -3,11 +3,14 @@ import numpy as np
 import timeit
 import theano
 import theano.tensor as T
+import timeit
 
-from datetime import datetime
-from ConvLadderNetwork import ConvLadderNetwork
+from ActivationLayer import ActivationLayer
+from Network import AutoEncodingNetwork
 from LadderNetwork import LadderNetwork
 from Param import Param
+
+from datetime import datetime
 
 # To split between labeld & unlabeled examples
 labeled    = lambda X, Y: X[T.nonzero(Y)[0]]
@@ -20,7 +23,8 @@ pred       = lambda Y: T.argmax(Y, axis=1)
 
 class AdamTrainer(object):
     
-    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08, l1_weight=0.0, l2_weight=0.1, cost='mse'):
+    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, 
+                 eps=1e-08, l1_weight=0.0, l2_weight=0.1, cost='mse'):
         self.alpha = alpha
         self.beta1 = beta1
         self.beta2 = beta2
@@ -45,10 +49,10 @@ class AdamTrainer(object):
             # classification error (taking into account only training examples with labels)
             self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         elif cost == 'cross_entropy':
-                self.y_pred = lambda network, x: network(x)
-                self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
-                # classification error (taking into account only training examples with labels)
-                self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
+            self.y_pred = lambda network, x: network(x)
+            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
+            # classification error (taking into account only training examples with labels)
+            self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         else:
             self.y_pred = lambda network, x: network(x)
             self.error  = lambda network, y_pred, y: T.zeros((1,))
@@ -93,8 +97,10 @@ class AdamTrainer(object):
     def get_eval_cost_error(self, network, input, output):
         
         y_pred = self.y_pred(network, input)
-        cost   = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
-                                                      self.l2_weight * self.l2_regularization(network)
+        cost   = self.cost(network, y_pred, output) + \
+                 self.l1_weight * self.l1_regularization(network) + \
+                 self.l2_weight * self.l2_regularization(network)
+
         error = None
 
         if (self.error):
@@ -103,10 +109,38 @@ class AdamTrainer(object):
         
         return (cost, error)
 
+    def get_hidden(self, network, input, depth):
+
+        return network.get_hidden(input, depth)
+
     def get_predictions(self, network, input):
 
-        y_pred = pred(self.y_pred(network, input)) + 1
-        return y_pred
+        return pred(self.y_pred(network, input)) + 1
+
+    def get_representation(self, network, rep_input, depth):
+        input = rep_input.type()
+        index = T.lscalar()
+        
+        rep = self.get_hidden(network, input, depth)
+
+        rep_func = theano.function(inputs=[index],
+                                   outputs=[rep],
+                                   givens={input:rep_input[index*self.batchsize:(index+1)*self.batchsize]},
+                                   allow_input_downcast=True)
+
+        #############################################
+        # Calculating the representation at layer n #
+        #############################################
+
+        rep_batchinds = np.arange(rep_input.shape.eval()[0] // self.batchsize)
+
+        # Will store the hidden representation
+        rep_tensor = rep_func(0)[0]
+
+        for bi in xrange(1, len(rep_batchinds)):
+            rep_tensor = np.concatenate((rep_tensor, rep_func(bi)[0]), axis=0)
+
+        return rep_tensor
 
     def create_eval_func(self, network=None, eval_input=None, eval_output=None):
         if (None in [network, eval_input]):
@@ -148,10 +182,37 @@ class AdamTrainer(object):
                                allow_input_downcast=True)
 
         return func
+
+    def eval(self, network, eval_input, eval_output, filename, logging=True):
+
+        eval_func = self.create_eval_func(network=network, eval_input=eval_input, eval_output=eval_output)
+
+        # Resetting to the parameters with the best validation performance
+        network.load(filename)
+
+        ##############
+        # Validation #
+        ##############
+
+        if (logging):
+            sys.stdout.write('... evaluating the model\n')
+
+        eval_batchinds = np.arange(eval_input.shape.eval()[0] // self.batchsize)
+        eval_errors = []
+        for bii, bi in enumerate(eval_batchinds):
+            eval_cost, eval_cost = eval_func(bi)
+            eval_errors.append(eval_cost)
+
+        eval_error = np.mean(eval_errors)
+
+        if (logging):
+            sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
+            sys.stdout.flush()
+
+        return eval_error
         
-    def train(self, network, train_input, train_output,
-                             valid_input=None, valid_output=None,
-                             test_input=None, test_output=None, filename=None, logging=True):
+    def train(self, network, train_input, train_output, valid_input=None, valid_output=None,
+                             filename=None, logging=True):
 
         """ Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
         """
@@ -159,14 +220,18 @@ class AdamTrainer(object):
         self.params = network.params
         param_values = [p.value for p in self.params]
 
-        self.m0params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in param_values]
-        self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in param_values]
+        self.m0params = [theano.shared(np.zeros(p.shape.eval(), 
+                         dtype=theano.config.floatX), borrow=True) for p in param_values]
+        self.m1params = [theano.shared(np.zeros(p.shape.eval(), 
+                         dtype=theano.config.floatX), borrow=True) for p in param_values]
+
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
 
 
-        train_func = self.create_train_func(network=network, train_input=train_input, train_output=train_output)
-        valid_func = self.create_eval_func(network=network, eval_input=valid_input, eval_output=valid_output)
-        test_func  = self.create_eval_func(network=network, eval_input=test_input, eval_output=test_output)
+        train_func = self.create_train_func(network=network, train_input=train_input, 
+                                                             train_output=train_output)
+        valid_func = self.create_eval_func(network=network, eval_input=valid_input, 
+                                                            eval_output=valid_output)
 
         ###############
         # TRAIN MODEL #
@@ -175,8 +240,8 @@ class AdamTrainer(object):
             sys.stdout.write('... training\n')
         
         best_epoch = 0
-        best_train_error = 1.
-        best_valid_error = 1.
+        best_train_error = np.inf
+        best_valid_error = np.inf
 
         last_tr_mean = 0.
 
@@ -201,7 +266,7 @@ class AdamTrainer(object):
 
                 tr_costs.append(tr_cost)
                 if np.isnan(tr_costs[-1]): 
-                    return
+                    raise ValueError('Most recent training cost is nan')
                 if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
                     sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
                     sys.stdout.flush()
@@ -254,30 +319,8 @@ class AdamTrainer(object):
 
         if (logging):
             sys.stdout.write(result_str)
-            sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
+            sys.stdout.write(('Training took %.2fm\n\n' % ((end_time - start_time) / 60.)))
             sys.stdout.flush()
-
-        # This should probably be done somewhere else
-#        if (test_func):
-#            ####################
-#            # Final Validation #
-#            ####################
-#
-#            # Resetting to the parameters with the best validation performance
-#            network.load(filename)
-#
-#            sys.stdout.write('... testing the model\n')
-#
-#            ts_batchinds = np.arange(test_input.shape.eval()[0] // self.batchsize)
-#            ts_errors = []
-#            for bii, bi in enumerate(ts_batchinds):
-#                test_cost, test_error = test_func(bi)
-#                ts_errors.append(test_error)
-#
-#            test_error = np.mean(ts_errors)
-#
-#            sys.stdout.write(('Test set performance: %.2f %%\n') % (test_error * 100.))
-#            sys.stdout.flush()
 
         return r_val
 
@@ -287,11 +330,9 @@ class AdamTrainer(object):
         
         predictions = self.get_predictions(network, input)
 
-        # TODO: Full batch evaluation
-        pred_batchsize = self.batchsize
         pred_func = theano.function(inputs=[index],
                                     outputs=[predictions],
-                                    givens={input:test_input[index*pred_batchsize:(index+1)*pred_batchsize]},
+                                    givens={input:test_input[index*self.batchsize:(index+1)*self.batchsize]},
                                     allow_input_downcast=True)
 
         #####################
@@ -300,7 +341,7 @@ class AdamTrainer(object):
 
         sys.stdout.write('... predicting for new input\n')
 
-        pred_batchinds = np.arange(test_input.shape.eval()[0] // pred_batchsize)
+        pred_batchinds = np.arange(test_input.shape.eval()[0] // self.batchsize)
 
         test_output = []
         for bii, bi in enumerate(pred_batchinds):
@@ -308,38 +349,73 @@ class AdamTrainer(object):
 
         np.savez_compressed(filename, test_output=np.array(test_output).flatten())
 
-#    def pretrain(self, network=None, epochs=10, pretrain_input=None, pretrain_output=None, filename=None):
-#        """Implements greedy layerwise pre-training as discussed in [1].
-#        May be used for stacked autoencoders by setting input=output and
-#        defining an appropriate cost function.
-#    
-#        References:
-#            [1] Goodfellow, Ian et al. 
-#            "Deep Learning." 
-#            MIT Press, 2016
-#        """
-#
-#        if (None in [network, pretrain_input, pretrain_output):
-#            raise ValueError('Received incorrect parameters')
-#
-#        ###########################
-#        # Pretraining the network #
-#        ###########################
-#
-#        layer_stack = network.layers
-#        network.layers = []
-#        pretrained_layers = []
-#
-#        sys.stdout.write('... pretraining\n')
-#
-#        for i in xrange(len(layer_stack)):
-#            network.layers = layer_stack[0]
-#            layer_stack = layer_stack[1:]
-#
-#            self.train(self, network, train_input=pretrain_input, train_output=pretrain_output, filename=filename)
-#            pretrained_layers.append(network.layers)
-                                                
-
     def set_params(self, alpha=0.001, beta1=0.9, beta2=0.999, l1_weight=0.0, l2_weight=0.1):
         alpha=alpha; beta1=beta1; beta2=beta2; l1_weight=l1_weight
         l2_weight=l2_weight
+
+class PreTrainer(AdamTrainer):
+    """Implements greedy layerwise pre-training as discussed in [1].
+    May be used for stacked autoencoders by setting input=output and
+    defining an appropriate cost function.
+
+    References:
+        [1] Goodfellow, Ian et al. 
+        "Deep Learning." 
+        MIT Press, 2016
+    """
+
+    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, 
+                       beta1=0.9, beta2=0.999, eps=1e-08, 
+                       l1_weight=0.0, l2_weight=0.1, cost='mse'):
+
+        super(PreTrainer, self).__init__(rng, batchsize, epochs=epochs, alpha=alpha, 
+                                         beta1=beta1, beta2=beta2, eps=eps, 
+                                         l1_weight=l1_weight, l2_weight=l2_weight, 
+                                         cost=cost)
+
+    def pretrain(self, network=None, pretrain_input=None, filename=None, logging=False):
+
+        if (None in [network, input]):
+            raise ValueError('Received incorrect parameters')
+
+        ###########################
+        # Pretraining the network #
+        ###########################
+
+        activation_idx = [-1] + [i for i in xrange(len(network.layers)) if type(network.layers[i]) is ActivationLayer]
+
+        # The layers leading to the last activation are not pretrained
+        iterations = len(activation_idx) - 2
+
+        finetuning_layers = list(network.layers[(activation_idx[-2]+1):])
+        layer_stack = list(network.layers[:(activation_idx[-2]+1)])
+        pretrained_layers = []
+
+        sys.stdout.write('... pretraining\n\n')
+        iteration = 0
+
+        start_time = timeit.default_timer()
+
+        for i in xrange(1, (iterations+1)):
+            network.set_layers(layer_stack[activation_idx[i-1]+1:(activation_idx[i]+1)])
+
+            inner_start_time = timeit.default_timer()
+
+            cost = self.train(AutoEncodingNetwork(network), train_input=pretrain_input, 
+                              train_output=pretrain_input, filename=None, logging=logging)
+
+            inner_end_time = timeit.default_timer()
+
+            sys.stdout.write('\r[Layer %i] 100.0%% training error: %.5f\n' % (iteration, cost))
+            sys.stdout.write('\r[Layer %i] Training took: %.2fm\n' % (iteration, (inner_end_time - inner_start_time) / 60.))
+
+            pretrained_layers += network.layers
+            pretrain_input = self.get_representation(network, rep_input=pretrain_input, depth=len(network.layers)-1)
+            pretrain_input = theano.shared(value=pretrain_input.astype(theano.config.floatX), borrow=True)
+            iteration += 1
+
+        end_time = timeit.default_timer()
+
+        network.set_layers(pretrained_layers + finetuning_layers)
+        sys.stdout.write('Pretraining complete. Took %.2fm\n\n' % ((end_time - start_time) / 60.))
+        sys.stdout.flush()
