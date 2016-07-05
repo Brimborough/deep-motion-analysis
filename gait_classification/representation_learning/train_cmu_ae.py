@@ -54,4 +54,4 @@ trainer.train(network=network, train_input=train_set_x, train_output=train_set_x
               filename=[None, '../models/cmu/dAe_v_0/layer_0.npz', None, None,   # Noise, 1. Conv, Activation, Pooling
                               '../models/cmu/dAe_v_0/layer_1.npz', None, None,   # 2. Conv, Activation, Pooling
                               '../models/cmu/dAe_v_0/layer_2.npz', None, None,]) # 3. Conv, Activation, Pooling
-#                              None, '../models/cmu/30062016/layer_3.npz', None])  # Reshape, Hidden, Activation
+#                              None, '../models/cmu/dAe_v_0/layer_3.npz', None]) # Reshape, Hidden, Activation

@@ -304,14 +304,14 @@ class AdamTrainer(object):
                 # TODO: Don't add time needed to save model to training time
                 network.save(filename)
 
-                result_str = 'Optimization complete. Best validation error of %.2f %% obtained at epoch %i\n' % (best_valid_error, best_epoch + 1)
+                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch + 1)
             elif (curr_tr_mean < best_train_error):
                 best_train_error = curr_tr_mean
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
-                result_str = 'Optimization complete. Best train error of %.2f %% obtained at epoch %i\n' % (best_train_error, best_epoch + 1)
+                result_str = 'Optimization complete. Best train error of %.4f %% obtained at epoch %i\n' % (best_train_error, best_epoch + 1)
             else:
                 pass
 
@@ -407,7 +407,7 @@ class PreTrainer(AdamTrainer):
             inner_end_time = timeit.default_timer()
 
             sys.stdout.write('\r[Layer %i] 100.0%% training error: %.5f\n' % (iteration, cost))
-            sys.stdout.write('\r[Layer %i] Training took: %.2fm\n' % (iteration, (inner_end_time - inner_start_time) / 60.))
+            sys.stdout.write('\r[Layer %i] Training took: %.4fm\n' % (iteration, (inner_end_time - inner_start_time) / 60.))
 
             pretrained_layers += network.layers
             pretrain_input = self.get_representation(network, rep_input=pretrain_input, depth=len(network.layers)-1)

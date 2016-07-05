@@ -1,12 +1,13 @@
 # Data sets
 ###################
 *.npz
+*.pkl.gz
 *.arff
 
 # Models
 ###################
 gait_classification/models
-gait_classification/data
+#gait_classification/data
 gait_classification/LSTM_TryOuts
 
 # Python
