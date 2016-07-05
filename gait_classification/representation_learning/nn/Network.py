@@ -37,6 +37,7 @@ class Network(object):
         if filename is None: return
         for fname, layer in zip(filename, self.layers):
             layer.load(fname)
+        self.set_layers(self.layers)
 
     def reset(self):
         for layer in self.layers: layer.reset()
@@ -53,10 +54,14 @@ class InverseNetwork(object):
     def inv(self, output):
         return self.network(output)
     
-    def save(self, filename): self.network.save(filename)
-    def load(self, filename): self.network.load(filename)
-    def reset(self): self.network.reset()
-        
+    def save(self, filename): 
+        self.network.save(filename)
+
+    def load(self, filename): 
+        self.network.load(filename)
+
+    def reset(self): 
+        self.network.reset()
         
 class AutoEncodingNetwork(object):
     """ Represents a deep autoencoder, i.e. the network
@@ -74,6 +79,12 @@ class AutoEncodingNetwork(object):
     def inv(self, output):
         return self.network(self.network.inv(output))
     
-    def save(self, filename): self.network.save(filename)
-    def load(self, filename): self.network.load(filename)
-    def reset(self): self.network.reset()
+    def save(self, filename): 
+        self.network.save(filename)
+
+    def load(self, filename): 
+        self.network.load(filename)
+        self.params = self.network.params
+
+    def reset(self): 
+        self.network.reset()

@@ -1,5 +1,5 @@
 import numpy as np
-import theano
+import theano 
 import theano.tensor as T
 
 from Param import Param
@@ -79,7 +79,7 @@ class Conv1DLayer(object):
         data = np.load(filename)
         self.W = theano.shared(value=data['W'].astype(theano.config.floatX), borrow=True)
         self.b = theano.shared(value=data['b'].astype(theano.config.floatX), borrow=True)
-        self.params = [self.W, self.b]
+        self.params = [Param(self.W, True), Param(self.b, False)]
     
     def save(self, filename):
         if filename is None: return

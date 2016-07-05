@@ -48,10 +48,10 @@ class BatchNormLayer(object):
     def load(self, filename):
         if filename is None: return
         if not filename.endswith('.npz'): filename+='.npz'
-
         data       = np.load(filename)
-        self.beta  = theano.shared(data['beta'].astype(theano.config.floatX), borrow=True)
-        self.gamma = theano.shared(data['gamma'].astype(theano.config.floatX), borrow=True)
+        self.beta = theano.shared(value = np.zeros(self.shape, dtype=theano.config.floatX), name='beta')
+        self.gamma = theano.shared(value = np.ones(self.shape, dtype=theano.config.floatX), name='gamma')
+        self.params = [Param(self.beta, False), Param(self.gamma, False)]
 
     def save(self, filename):
         if filename is None: return
