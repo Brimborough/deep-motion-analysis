@@ -323,11 +323,11 @@ def load_styletransfer(rng, split):
     datasets = fair_split(rng, X, Y, split)
     return datasets
 
-def load_cmu(rng):
+def load_cmu(rng, filename='../data/data_cmu.npz'):
 
     sys.stdout.write('... loading data\n')
 
-    data = np.load('../data/data_cmu.npz')
+    data = np.load(filename)
 
     clips = data['clips']
 
@@ -351,6 +351,9 @@ def load_cmu(rng):
     X = X[I]
 
     return [(X,)]
+
+def load_cmu_small(rng):
+    return load_cmu(rng=rng, filename='../data/data_cmu_small.npz')
 
 def load_mnist(rng):
     ''' Loads the MNIST dataset

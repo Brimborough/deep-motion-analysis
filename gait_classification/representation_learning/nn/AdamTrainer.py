@@ -41,8 +41,8 @@ class AdamTrainer(object):
         # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
         if   cost == 'mse':
             self.y_pred = lambda network, x: network(x)
-            self.error  = lambda network, x, y: T.mean((network(x) - y)**2)
-            self.cost   = lambda network, x, y: T.mean((network(x) - y)**2)
+            self.error  = lambda network, x, y: T.mean((x - y)**2)
+            self.cost   = lambda network, x, y: T.mean((x - y)**2)
         elif cost == 'binary_cross_entropy':
             self.y_pred = lambda network, x: network(x)
             self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
@@ -59,8 +59,6 @@ class AdamTrainer(object):
             self.cost   = cost
 
     def l1_regularization(self, network, target=0.0):
-        # The if term ensures we do not regularise biases
-        # TODO: This will cause problems for a single output unit, fix this
         return sum([T.mean(abs(p.value - target)) for p in network.params if (p.regularisable == True)])
 
     def l2_regularization(self, network, target=0.0):
@@ -204,7 +202,6 @@ class AdamTrainer(object):
             eval_errors.append(eval_cost)
 
         eval_error = np.mean(eval_errors)
-
         if (logging):
             sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
             sys.stdout.flush()
@@ -268,13 +265,16 @@ class AdamTrainer(object):
                 if np.isnan(tr_costs[-1]): 
                     raise ValueError('Most recent training cost is nan')
                 if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
-                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
+#                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_error) * 100.))
+#                    sys.stdout.flush()
+                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors)))
                     sys.stdout.flush()
 
             curr_tr_mean = np.mean(tr_errors)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
 
-            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % (epoch, curr_tr_mean * 100., diff_tr_mean * 100.)
+#            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % (epoch, curr_tr_mean * 100., diff_tr_mean * 100.)
+            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % (epoch, curr_tr_mean, diff_tr_mean)
 
             if (valid_func):
                 valid_batchinds = np.arange(valid_input.shape.eval()[0] // self.batchsize)
@@ -287,7 +287,7 @@ class AdamTrainer(object):
                 valid_error = np.mean(vl_errors)
                 valid_diff = valid_error - best_valid_error
 
-                output_str += ' validation error: %.5f validation diff: %.5f' % (valid_error * 100., valid_diff * 100.)
+                output_str += ' validation error: %.5f validation diff: %.5f' % (valid_error, valid_diff)
 
             output_str += ' %s\n' % (str(datetime.now())[11:19])
 
@@ -304,14 +304,14 @@ class AdamTrainer(object):
                 # TODO: Don't add time needed to save model to training time
                 network.save(filename)
 
-                result_str = 'Optimization complete. Best validation error of %.2f %% obtained at epoch %i\n' % (best_valid_error * 100., best_epoch + 1)
+                result_str = 'Optimization complete. Best validation error of %.2f %% obtained at epoch %i\n' % (best_valid_error, best_epoch + 1)
             elif (curr_tr_mean < best_train_error):
                 best_train_error = curr_tr_mean
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
-                result_str = 'Optimization complete. Best train error of %.2f %% obtained at epoch %i\n' % (best_train_error * 100., best_epoch + 1)
+                result_str = 'Optimization complete. Best train error of %.2f %% obtained at epoch %i\n' % (best_train_error, best_epoch + 1)
             else:
                 pass
 
