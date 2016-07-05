@@ -24,8 +24,8 @@ np.savez_compressed('../data/Joe/preprocess.npz', Xmean=Xmean, Xstd=Xstd)
 
 X = (X - Xmean) / Xstd
 
-I = np.arange(len(X))
-rng.shuffle(I); X = X[I]
+#I = np.arange(len(X))
+#rng.shuffle(I); X = X[I]
 
 E = theano.shared(X, borrow=True)
 
@@ -40,6 +40,7 @@ E = theano.shared(X, borrow=True)
 def cost(network, X, Y):
     return T.mean((network(X) - Y)**2)
 
+'''
 trainer = AdamTrainer(rng, batchsize=1, epochs=25, alpha=0.00001)
 trainer.train(AutoEncodingNetwork(network), E, E, [
     None,
@@ -47,3 +48,5 @@ trainer.train(AutoEncodingNetwork(network), E, E, [
     '../models/conv_ae/layer_1.npz', None, None,
     '../models/conv_ae/layer_2.npz', None, None,
 ])
+
+'''

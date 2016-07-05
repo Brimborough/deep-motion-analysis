@@ -48,7 +48,5 @@ for input in range(0,len(X),BATCH_SIZE):
     # Build the non-noisy outputs
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)[:]
 
-
-
 #Save the noisy activations
 np.savez_compressed('../data/Joe/HiddenActivations', Noisy=Xnout, Orig=Xoout)

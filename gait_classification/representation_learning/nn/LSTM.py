@@ -269,6 +269,7 @@ class LSTM(object):
             h = m_[:, None] * h + (1. - m_)[:, None] * h_
             # These get passed in the middle due to recursion. (IDK why in the middle)
 
+            #TODO: ADD OUTPUT Weights and bias ????
             return h, c
 
         # Initial transform.

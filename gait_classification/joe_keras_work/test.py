@@ -8,7 +8,7 @@ import sys
 
 sys.path.append('../representation_learning/nn')
 
-from BatchNormLayer import BatchNormLayer
+from LSTM import LSTM
 
 
 """
@@ -18,3 +18,6 @@ from BatchNormLayer import BatchNormLayer
 
 16*90 90*90 = 16*90
 """
+
+#Add IMDB DATA here
+
