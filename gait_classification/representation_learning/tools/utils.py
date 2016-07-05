@@ -291,34 +291,40 @@ def random_split(rng, data, one_hot_labels, proportions):
 
     return datasets
 
-def load_styletransfer(rng, split):
+def load_styletransfer(rng, split, labels='combined'):
 
     sys.stdout.write('... loading data\n')
 
-    data = np.load('../data/data_styletransfer.npz')
+    data = np.load('../data/styletransfer/data_styletransfer.npz')
 
-    clips = data['clips']
-
-    clips = np.swapaxes(clips, 1, 2)
+    clips = data['clips'].swapaxes(1, 2)
     X = clips[:,:-4].astype(theano.config.floatX)
 
     #(Motion, Styles)
     classes = data['classes']
 
     # get mean and std
-    preprocessed = np.load('../data/styletransfer_preprocessed.npz')
+    preprocessed = np.load('../data/styletransfer/styletransfer_preprocessed.npz')
 
     Xmean = preprocessed['Xmean']
     Xmean = Xmean.reshape(1,len(Xmean),1)
     Xstd  = preprocessed['Xstd']
     Xstd = Xstd.reshape(1,len(Xstd),1)
 
-    Xstd[np.where(Xstd == 0)] = 1
+    # TODO: Is this necessary?
+#    Xstd[np.where(Xstd == 0)] = 1
 
     X = (X - Xmean) / (Xstd + 1e-10)
 
     # Motion labels in one-hot vector format
-    Y = np.load('../data/styletransfer_motions_one_hot.npz')['one_hot_vectors']
+    Y = np.load('../data/styletransfer/styletransfer_one_hot.npz')[labels]
+
+    # Randomise data
+    I = np.arange(len(X))
+    rng.shuffle(I)
+
+    X = X[I]
+    Y = Y[I]
 
     datasets = fair_split(rng, X, Y, split)
     return datasets
