@@ -298,7 +298,7 @@ def load_styletransfer(rng, split, labels='combined'):
     data = np.load('../data/styletransfer/data_styletransfer.npz')
 
     clips = data['clips'].swapaxes(1, 2)
-    X = clips[:,:-4].astype(theano.config.floatX)
+    X = clips[:,:-4]
 
     #(Motion, Styles)
     classes = data['classes']
@@ -323,13 +323,13 @@ def load_styletransfer(rng, split, labels='combined'):
     I = np.arange(len(X))
     rng.shuffle(I)
 
-    X = X[I]
-    Y = Y[I]
+    X = X[I].astype(theano.config.floatX)
+    Y = Y[I].astype(theano.config.floatX)
 
     datasets = fair_split(rng, X, Y, split)
     return datasets
 
-def load_cmu(rng, filename='../data/data_cmu.npz'):
+def load_cmu(rng, filename='../data/cmu/data_cmu.npz'):
 
     sys.stdout.write('... loading data\n')
 
