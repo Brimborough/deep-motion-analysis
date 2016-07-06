@@ -53,7 +53,7 @@ model.add(Dropout(0.2))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation('relu'))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
-model.compile(loss='mean_squared_error', optimizer='adam')
+model.compile(loss='mean_squared_error', optimizer='nadam')
 
 print('Training model...')
 hist = model.fit(train_x, train_y, batch_size=5, nb_epoch=50)
