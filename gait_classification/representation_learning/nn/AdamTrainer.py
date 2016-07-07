@@ -205,20 +205,20 @@ class AdamTrainer(object):
 
         sys.stdout.write('... evaluating the model\n')
 
-        eval_error = self.run_func(eval_func, eval_input, logging=False, epoch=0)
+        eval_error, eval_cost = self.run_func(eval_func, eval_input, logging=False, epoch=0)
 
         sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
         sys.stdout.flush()
 
         return eval_error
 
-    def run_func(self, func, train_input, logging=True, epoch=0):
+    def run_func(self, func, func_input, logging=True, epoch=0):
 
         if (None == func):
-            return None
+            return np.inf, np.inf
 
-        train_batchinds = np.arange(train_input.shape.eval()[0] // self.batchsize)
-        self.rng.shuffle(train_batchinds)
+        func_batchinds = np.arange(func_input.shape.eval()[0] // self.batchsize)
+        self.rng.shuffle(func_batchinds)
         
         if (logging):
             sys.stdout.write('\n')
@@ -226,25 +226,27 @@ class AdamTrainer(object):
         tr_costs  = []
         tr_errors = []
 
-        for bii, bi in enumerate(train_batchinds):
+        for bii, bi in enumerate(func_batchinds):
             tr_cost, tr_error = func(bi)
 
             # tr_error might be nan for a batch without labels in semi-supervised learning
-            if not np.isnan(tr_error):
-                tr_errors.append(tr_error)
+            if np.isnan(tr_error):
+                raise ValueError('Most recent error is nan')
+
+            if np.isnan(tr_cost): 
+                raise ValueError('Most recent cost is nan')
 
             tr_costs.append(tr_cost)
+            tr_errors.append(tr_error)
 
-            if np.isnan(tr_costs[-1]): 
-                raise ValueError('Most recent training cost is nan')
-
-            if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
-                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors)))
+            if (logging and (bii % (int(len(func_batchinds) / 1000) + 1) == 0)):
+                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(func_batchinds), np.mean(tr_errors)))
                 sys.stdout.flush()
 
-        curr_tr_mean = np.mean(tr_errors)
+        error_mean = np.mean(tr_errors)
+        cost_mean = np.mean(tr_costs)
 
-        return curr_tr_mean
+        return error_mean, cost_mean
         
     def train(self, network, train_input, train_output, valid_input=None, valid_output=None,
                              filename=None, logging=True):
@@ -276,22 +278,25 @@ class AdamTrainer(object):
             sys.stdout.write('... training\n')
         
         best_epoch = 0
+
+        best_train_cost  = np.inf
         best_train_error = np.inf
+        best_valid_cost  = np.inf
         best_valid_error = np.inf
 
-        last_tr_mean = 0.
+        last_train_error = 0.
 
         start_time = timeit.default_timer()
 
         for epoch in range(1, self.epochs+1):
 
-            curr_tr_mean = self.run_func(train_func, train_input, logging=True, epoch=epoch)
-            diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
+            curr_train_error, train_cost = self.run_func(train_func, train_input, logging=True, epoch=epoch)
+            diff_train_error, last_train_error = curr_train_error-last_train_error, curr_train_error
 
             output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % \
-                         (epoch, curr_tr_mean, diff_tr_mean)
+                         (epoch, curr_train_error, diff_train_error)
 
-            valid_error = self.run_func(valid_func, valid_input, logging=False)
+            valid_error, valid_cost = self.run_func(valid_func, valid_input, logging=False)
 
             if (valid_error is not np.nan):
                 valid_diff = valid_error - best_valid_error
@@ -306,22 +311,27 @@ class AdamTrainer(object):
                 sys.stdout.flush()
 
             # Early stopping
-            if (valid_func and (valid_error < best_valid_error)):
-                best_valid_error = valid_error
-                r_val = best_valid_error
-                best_epoch = epoch
+            if (valid_func):
+                if ((valid_error < best_valid_error) or
+                    (valid_error == best_valid_error and valid_cost < best_valid_cost)):
+                    best_valid_error = valid_error
+                    best_valid_cost  = valid_cost
+                    r_val = best_valid_error
+                    best_epoch = epoch
 
-                # TODO: Don't add time needed to save model to training time
-                network.save(filename)
+                    network.save(filename)
+                    result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
 
-                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
-            elif (curr_tr_mean < best_train_error):
-                best_train_error = curr_tr_mean
+            elif ((curr_train_error < best_train_error) or 
+                 (curr_train_error == best_train_error and train_cost < best_train_cost)):
+                best_train_error = curr_train_error
+                best_train_cost  = train_cost
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
                 result_str = 'Optimization complete. Best train error of %.5f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
+
             else:
                 pass
 
