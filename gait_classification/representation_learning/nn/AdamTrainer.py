@@ -1,8 +1,8 @@
-import sys
 import numpy as np
 import timeit
 import theano
 import theano.tensor as T
+import sys
 import timeit
 
 from ActivationLayer import ActivationLayer
@@ -35,28 +35,31 @@ class AdamTrainer(object):
         self.epochs = epochs
         self.batchsize = batchsize
 
+        self.y_pred = lambda network, x: network(x)
+        self.error, self.cost = self.create_cost_functions(cost=cost)
+
+    def create_cost_functions(self, cost='mse'):
         # Where cost is always the cost which is minimised in supervised training
         # the T.nonzero term ensures that the cost is only calculated for examples with a label
         #
         # Convetion: We mark unlabelled examples with a vector of zeros in lieu of a one-hot vector
+
         if   cost == 'mse':
-            self.y_pred = lambda network, x: network(x)
-            self.error  = lambda network, x, y: T.mean((x - y)**2)
-            self.cost   = lambda network, x, y: T.mean((x - y)**2)
+            error  = lambda network, x, y: T.mean((x - y)**2)
+            cost   = lambda network, x, y: T.mean((x - y)**2)
         elif cost == 'binary_cross_entropy':
-            self.y_pred = lambda network, x: network(x)
-            self.cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
+            cost   = lambda network, y_pred, y: T.nnet.binary_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
             # classification error (taking into account only training examples with labels)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
+            error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         elif cost == 'cross_entropy':
-            self.y_pred = lambda network, x: network(x)
-            self.cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
+            cost   = lambda network, y_pred, y: T.nnet.categorical_crossentropy(labeled(y_pred, y), labeled(y, y)).mean()
             # classification error (taking into account only training examples with labels)
-            self.error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
+            error  = lambda network, y_pred, y: T.mean(T.neq(pred(labeled(y_pred, y)), pred(labeled(y, y))))
         else:
-            self.y_pred = lambda network, x: network(x)
-            self.error  = lambda network, y_pred, y: T.zeros((1,))
-            self.cost   = cost
+            error  = lambda network, y_pred, y: T.zeros((1,))
+            cost   = cost
+
+        return error, cost
 
     def l1_regularization(self, network, target=0.0):
         return sum([T.mean(abs(p.value - target)) for p in network.params if (p.regularisable == True)])
@@ -74,7 +77,12 @@ class AdamTrainer(object):
         if (self.error):
             # Only meaningful in classification
             error = self.error(network, y_pred, output)
-        
+
+        updates = self.get_grad_updates(cost)
+
+        return (cost, updates, error)
+
+    def get_grad_updates(self, cost):
         param_values = [p.value for p in self.params]
 
         gparams = T.grad(cost, param_values)
@@ -90,7 +98,8 @@ class AdamTrainer(object):
                    [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
                    [(self.t, self.t+1)])
 
-        return (cost, updates, error)
+        return updates
+
 
     def get_eval_cost_error(self, network, input, output):
         
@@ -183,7 +192,7 @@ class AdamTrainer(object):
 
         return func
 
-    def eval(self, network, eval_input, eval_output, filename, logging=True):
+    def eval(self, network, eval_input, eval_output, filename):
 
         eval_func = self.create_eval_func(network=network, eval_input=eval_input, eval_output=eval_output)
 
@@ -194,26 +203,54 @@ class AdamTrainer(object):
         # Validation #
         ##############
 
-        if (logging):
-            sys.stdout.write('... evaluating the model\n')
+        sys.stdout.write('... evaluating the model\n')
 
-        eval_batchinds = np.arange(eval_input.shape.eval()[0] // self.batchsize)
-        eval_errors = []
-        for bii, bi in enumerate(eval_batchinds):
-            eval_cost, eval_cost = eval_func(bi)
-            eval_errors.append(eval_cost)
+        eval_error = self.run_func(eval_func, eval_input, logging=False, epoch=0)
 
-        eval_error = np.mean(eval_errors)
-        if (logging):
-            sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
-            sys.stdout.flush()
+        sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
+        sys.stdout.flush()
 
         return eval_error
+
+    def run_func(self, func, train_input, logging=True, epoch=0):
+
+        if (None == func):
+            return None
+
+        train_batchinds = np.arange(train_input.shape.eval()[0] // self.batchsize)
+        self.rng.shuffle(train_batchinds)
+        
+        if (logging):
+            sys.stdout.write('\n')
+        
+        tr_costs  = []
+        tr_errors = []
+
+        for bii, bi in enumerate(train_batchinds):
+            tr_cost, tr_error = func(bi)
+
+            # tr_error might be nan for a batch without labels in semi-supervised learning
+            if not np.isnan(tr_error):
+                tr_errors.append(tr_error)
+
+            tr_costs.append(tr_cost)
+
+            if np.isnan(tr_costs[-1]): 
+                raise ValueError('Most recent training cost is nan')
+
+            if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
+                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors)))
+                sys.stdout.flush()
+
+        curr_tr_mean = np.mean(tr_errors)
+
+        return curr_tr_mean
         
     def train(self, network, train_input, train_output, valid_input=None, valid_output=None,
                              filename=None, logging=True):
 
-        """ Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
+        """ Conventions: For training examples with labels, pass a one-hot vector, 
+                         otherwise a numpy array with zero values.
         """
 
         self.params = network.params
@@ -228,9 +265,9 @@ class AdamTrainer(object):
 
 
         train_func = self.create_train_func(network=network, train_input=train_input, 
-                                                             train_output=train_output)
+                                            train_output=train_output)
         valid_func = self.create_eval_func(network=network, eval_input=valid_input, 
-                                                            eval_output=valid_output)
+                                           eval_output=valid_output)
 
         ###############
         # TRAIN MODEL #
@@ -246,50 +283,21 @@ class AdamTrainer(object):
 
         start_time = timeit.default_timer()
 
-        for epoch in range(self.epochs):
-            
-            train_batchinds = np.arange(train_input.shape.eval()[0] // self.batchsize)
-            self.rng.shuffle(train_batchinds)
-            
-            if (logging):
-                sys.stdout.write('\n')
-            
-            tr_costs  = []
-            tr_errors = []
-            for bii, bi in enumerate(train_batchinds):
-                tr_cost, tr_error = train_func(bi)
+        for epoch in range(1, self.epochs+1):
 
-                # tr_error might be nan for a batch without labels in semi-supervised learning
-                if not np.isnan(tr_error):
-                    tr_errors.append(tr_error)
-
-                tr_costs.append(tr_cost)
-                if np.isnan(tr_costs[-1]): 
-                    raise ValueError('Most recent training cost is nan')
-                if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
-#                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_error) * 100.))
-#                    sys.stdout.flush()
-                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors)))
-                    sys.stdout.flush()
-
-            curr_tr_mean = np.mean(tr_errors)
+            curr_tr_mean = self.run_func(train_func, train_input, logging=True, epoch=epoch)
             diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
 
-#            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % (epoch, curr_tr_mean * 100., diff_tr_mean * 100.)
-            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % (epoch, curr_tr_mean, diff_tr_mean)
+            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % \
+                         (epoch, curr_tr_mean, diff_tr_mean)
 
-            if (valid_func):
-                valid_batchinds = np.arange(valid_input.shape.eval()[0] // self.batchsize)
+            valid_error = self.run_func(valid_func, valid_input, logging=False)
 
-                vl_errors = []
-                for bii, bi in enumerate(valid_batchinds):
-                    vl_cost, vl_error = valid_func(bi)
-                    vl_errors.append(vl_error)
-
-                valid_error = np.mean(vl_errors)
+            if (valid_error is not np.nan):
                 valid_diff = valid_error - best_valid_error
-
-                output_str += ' validation error: %.5f validation diff: %.5f' % (valid_error, valid_diff)
+                output_str += ' validation error: %.5f validation diff: %.5f' % \
+                              (valid_error, valid_diff)
+                pass
 
             output_str += ' %s\n' % (str(datetime.now())[11:19])
 
@@ -306,14 +314,14 @@ class AdamTrainer(object):
                 # TODO: Don't add time needed to save model to training time
                 network.save(filename)
 
-                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch + 1)
+                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
             elif (curr_tr_mean < best_train_error):
                 best_train_error = curr_tr_mean
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
-                result_str = 'Optimization complete. Best train error of %.4f %% obtained at epoch %i\n' % (best_train_error, best_epoch + 1)
+                result_str = 'Optimization complete. Best train error of %.5f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
             else:
                 pass
 
