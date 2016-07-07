@@ -4,9 +4,12 @@ import timeit
 import theano
 import theano.tensor as T
 
-from datetime import datetime
+from AdamTrainer import AdamTrainer
 from ConvLadderNetwork import ConvLadderNetwork
 from LadderNetwork import LadderNetwork
+from Param import Param
+
+from datetime import datetime
 
 # To split between labeld & unlabeled examples
 labeled    = lambda X, Y: X[T.nonzero(Y)[0]]
@@ -70,10 +73,11 @@ class LadderAdamTrainer(AdamTrainer):
         # supervised cost + regularisation
         cost = self.cost(network, coding_dist, output) + self.l1_weight * self.l1_regularization(network) + \
                                                          self.l2_weight * self.l2_regularization(network)
+
         us = cost
         # unsupervised cost
-#        us = self.unsupervised_cost(network)
-#        cost += us
+        us = self.unsupervised_cost(network)
+        cost += us
 
         error = None
 
@@ -81,18 +85,7 @@ class LadderAdamTrainer(AdamTrainer):
             # Only meaningful in classification
             error = self.error(network, y_pred, output)
         
-        gparams = T.grad(cost, self.params)
-        m0params = [self.beta1 * m0p + (1-self.beta1) *  gp     for m0p, gp in zip(self.m0params, gparams)]
-        m1params = [self.beta2 * m1p + (1-self.beta2) * (gp*gp) for m1p, gp in zip(self.m1params, gparams)]
-        params = [p - (self.alpha) * 
-                  ((m0p/(1-(self.beta1**self.t[0]))) /
-            (T.sqrt(m1p/(1-(self.beta2**self.t[0]))) + self.eps))
-            for p, m0p, m1p in zip(self.params, m0params, m1params)]
-        
-        updates = ([( p,  pn) for  p,  pn in zip(self.params, params)] +
-                   [(m0, m0n) for m0, m0n in zip(self.m0params, m0params)] +
-                   [(m1, m1n) for m1, m1n in zip(self.m1params, m1params)] +
-                   [(self.t, self.t+1)])
+        updates = self.get_grad_updates(cost)
 
         return (cost, updates, error, us)
 
@@ -116,8 +109,13 @@ class LadderAdamTrainer(AdamTrainer):
         index = T.lscalar()
         
         self.params = network.params
-        self.m0params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
-        self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
+
+        param_values = [p.value for p in self.params]
+        self.m0params = [theano.shared(np.zeros(p.shape.eval(), 
+                         dtype=theano.config.floatX), borrow=True) for p in param_values]
+        self.m1params = [theano.shared(np.zeros(p.shape.eval(), 
+                         dtype=theano.config.floatX), borrow=True) for p in param_values]
+
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
         
         cost, updates, error, us = self.get_cost_updates(network, input, output)
@@ -181,10 +179,6 @@ class LadderAdamTrainer(AdamTrainer):
                 tr_cost, tr_error, us = train_func(bi)
                 tr_us.append(us)
 
-                print tr_error
-                print tr_cost
-                print us
-
                 # tr_error might be nan for a batch without labels in semi-supervised learning
                 if not np.isnan(tr_error):
                     tr_errors.append(tr_error)
@@ -193,7 +187,7 @@ class LadderAdamTrainer(AdamTrainer):
                 if np.isnan(tr_costs[-1]): 
                     return
                 if bii % (int(len(train_batchinds) / 1000) + 1) == 0:
-                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100.))
+                    sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f unsupervised_cost: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors) * 100., np.mean(tr_us)))
                     sys.stdout.flush()
 
             curr_tr_mean = np.mean(tr_errors)
