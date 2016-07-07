@@ -46,14 +46,17 @@ def model(X_train, Y_train, X_test, Y_test):
     model = Sequential()
     model.add(LSTM(256, return_sequences=True, input_shape=(29, 256), consume_less='gpu', \
                     init='glorot_normal'))
-    model.add(Dropout({{uniform(0, 1)}}))
+    model.add(Dropout({{uniform(0, 0.5)}}))
     model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
-    model.add(Dropout({{uniform(0, 1)}}))
+    model.add(Dropout({{uniform(0, 0.5)}}))
+    model.add(LSTM(1024, return_sequences=True, consume_less='gpu', \
+                   init='glorot_normal'))
+    model.add(Dropout({{uniform(0, 0.5)}}))
     model.add(TimeDistributed(Dense(256)))
-    model.add(Activation({{choice([keras.layers.advanced_activations.ELU(alpha=1.0), 'relu', keras.layers.advanced_activations.PReLU(init='zero', weights=None)])}}))
+    model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam') 
-    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y))
+    hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=100, validation_data=(test_x,test_y))
     score = model.evaluate(test_x, test_y, verbose=0)
 
     print('Test Score:', score)
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     best_run = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=100,
+                                          max_evals=10,
                                           trials=Trials())
     X_train, Y_train, X_test, Y_test = data()
     print("Best Run:")
