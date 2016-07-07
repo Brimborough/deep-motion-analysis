@@ -1,0 +1,26 @@
+{
+"language": "PYTHON",
+"main-file": "spearmint_s_f_f3.py",
+"experiment-name": "test-sequential-3-layers",
+"likelihood": "NOISELESS",
+"variables": {
+"drop1": {
+"type": "FLOAT",
+"size": 1,
+"min": 0,
+"max": 0.5
+},
+"drop2": {
+"type": "FLOAT",
+"size": 1,
+"min": 0,
+"max": 0.5
+},
+"drop3": {
+"type": "FLOAT",
+"size": 1,
+"min": 0,
+"max": 0.5
+}
+}
+}
