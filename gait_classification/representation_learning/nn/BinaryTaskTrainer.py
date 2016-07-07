@@ -22,7 +22,7 @@ class BinaryTaskTrainer(AdamTrainer):
     def __init__(self, rng, batchsize, epochs=100, alpha=0.001, 
                        beta1=0.9, beta2=0.999, eps=1e-08, 
                        task1_weight=1., task2_weight=1., 
-                       l1_weight=0.0, l2_weight=0.1, costs=[]):
+                       l1_weight=0.0, l2_weight=0.0, costs=[]):
 
         if (0 == len(costs)):
             raise ValueError('Must specify at least two cost functions.')
@@ -33,6 +33,7 @@ class BinaryTaskTrainer(AdamTrainer):
                                          cost=costs[0])
 
         # Creates cost functions for each type of cost, tuples of (error, cost)
+        # The first cost functions will be used during validation
         self.cost_funcs = [(self.error, self.cost)]
         self.cost_funcs.append(self.create_cost_functions(costs[1]))
 
@@ -53,6 +54,21 @@ class BinaryTaskTrainer(AdamTrainer):
         updates = self.get_grad_updates(cost)
 
         return (cost1, cost2, updates, error)
+
+    def get_eval_cost_error(self, network, input, output):
+        
+        y_pred = self.y_pred(network, input)[0]
+        cost   = self.cost(network, y_pred, output) + \
+                 self.l1_weight * self.l1_regularization(network) + \
+                 self.l2_weight * self.l2_regularization(network)
+
+        error = None
+
+        if (self.error):
+            # Only meaningful in classification
+            error = self.error(network, y_pred, output)
+        
+        return (cost, error)
 
     def create_train_func(self, network=None, train_input=None, train_outputs=None):
         if (None in [network, train_input, train_outputs]):
@@ -78,7 +94,8 @@ class BinaryTaskTrainer(AdamTrainer):
 
         return func
 
-    def train(self, network, train_input, train_outputs, filename=None, logging=True):
+    def train(self, network, train_input, train_outputs, 
+                    valid_input=None, valid_output=None, filename=None, logging=True):
 
         """ Conventions: For training examples with labels, pass a one-hot vector, otherwise a numpy array with zero values.
         """
@@ -94,7 +111,10 @@ class BinaryTaskTrainer(AdamTrainer):
         self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
 
 
-        train_func = self.create_train_func(network=network, train_input=train_input, train_outputs=train_outputs)
+        train_func = self.create_train_func(network=network, train_input=train_input, 
+                                            train_outputs=train_outputs)
+        valid_func = self.create_eval_func(network=network, eval_input=valid_input, 
+                                           eval_output=valid_output)
 
         ###############
         # TRAIN MODEL #
@@ -104,6 +124,7 @@ class BinaryTaskTrainer(AdamTrainer):
         
         best_epoch = 0
         best_train_error = np.inf
+        best_valid_error = np.inf
 
         last_tr_mean = 0.
 
@@ -144,6 +165,13 @@ class BinaryTaskTrainer(AdamTrainer):
 
             output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f cost1: %.5f cost2: %.5f' % (epoch, np.mean(tr_errors), np.mean(tr_costs1), np.mean(tr_costs2))
 
+            valid_error = self.run_func(valid_func, valid_input, logging=False)
+
+            if (valid_error is not np.nan):
+                valid_diff = valid_error - best_valid_error
+                output_str += ' validation error: %.5f validation diff: %.5f' % \
+                              (valid_error, valid_diff)
+
             output_str += ' %s\n' % (str(datetime.now())[11:19])
 
             if (logging):
@@ -151,7 +179,16 @@ class BinaryTaskTrainer(AdamTrainer):
                 sys.stdout.flush()
 
             # Early stopping
-            if (curr_tr_mean < best_train_error):
+            if (valid_func and (valid_error < best_valid_error)):
+                best_valid_error = valid_error
+                r_val = best_valid_error
+                best_epoch = epoch
+
+                # TODO: Don't add time needed to save model to training time
+                network.save(filename)
+
+                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
+            elif (curr_tr_mean < best_train_error):
                 best_train_error = curr_tr_mean
                 r_val = best_train_error
                 best_epoch = epoch

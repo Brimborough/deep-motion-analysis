@@ -24,7 +24,7 @@ pred       = lambda Y: T.argmax(Y, axis=1)
 class AdamTrainer(object):
     
     def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, 
-                 eps=1e-08, l1_weight=0.0, l2_weight=0.1, cost='mse'):
+                 eps=1e-08, l1_weight=0.0, l2_weight=0.0, cost='mse'):
         self.alpha = alpha
         self.beta1 = beta1
         self.beta2 = beta2
@@ -147,7 +147,7 @@ class AdamTrainer(object):
         for bi in xrange(1, len(rep_batchinds)):
             rep_tensor.append(rep_func(bi)[0])
 
-        rep_tensor = np.array(rep_tensor)
+        rep_tensor = np.squeeze(np.array(rep_tensor))
 
         return rep_tensor
 
@@ -205,20 +205,20 @@ class AdamTrainer(object):
 
         sys.stdout.write('... evaluating the model\n')
 
-        eval_error = self.run_func(eval_func, eval_input, logging=False, epoch=0)
+        eval_error, eval_cost = self.run_func(eval_func, eval_input, logging=False, epoch=0)
 
         sys.stdout.write(('Test set performance: %.2f %%\n\n') % (eval_error * 100.))
         sys.stdout.flush()
 
         return eval_error
 
-    def run_func(self, func, train_input, logging=True, epoch=0):
+    def run_func(self, func, func_input, logging=True, epoch=0):
 
         if (None == func):
-            return None
+            return np.inf, np.inf
 
-        train_batchinds = np.arange(train_input.shape.eval()[0] // self.batchsize)
-        self.rng.shuffle(train_batchinds)
+        func_batchinds = np.arange(func_input.shape.eval()[0] // self.batchsize)
+        self.rng.shuffle(func_batchinds)
         
         if (logging):
             sys.stdout.write('\n')
@@ -226,25 +226,27 @@ class AdamTrainer(object):
         tr_costs  = []
         tr_errors = []
 
-        for bii, bi in enumerate(train_batchinds):
+        for bii, bi in enumerate(func_batchinds):
             tr_cost, tr_error = func(bi)
 
             # tr_error might be nan for a batch without labels in semi-supervised learning
-            if not np.isnan(tr_error):
-                tr_errors.append(tr_error)
+            if np.isnan(tr_error):
+                raise ValueError('Most recent error is nan')
+
+            if np.isnan(tr_cost): 
+                raise ValueError('Most recent cost is nan')
 
             tr_costs.append(tr_cost)
+            tr_errors.append(tr_error)
 
-            if np.isnan(tr_costs[-1]): 
-                raise ValueError('Most recent training cost is nan')
-
-            if (logging and (bii % (int(len(train_batchinds) / 1000) + 1) == 0)):
-                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(train_batchinds), np.mean(tr_errors)))
+            if (logging and (bii % (int(len(func_batchinds) / 1000) + 1) == 0)):
+                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(func_batchinds), np.mean(tr_errors)))
                 sys.stdout.flush()
 
-        curr_tr_mean = np.mean(tr_errors)
+        error_mean = np.mean(tr_errors)
+        cost_mean = np.mean(tr_costs)
 
-        return curr_tr_mean
+        return error_mean, cost_mean
         
     def train(self, network, train_input, train_output, valid_input=None, valid_output=None,
                              filename=None, logging=True):
@@ -252,7 +254,7 @@ class AdamTrainer(object):
         """ Conventions: For training examples with labels, pass a one-hot vector, 
                          otherwise a numpy array with zero values.
         """
-        
+
         self.params = network.params
         param_values = [p.value for p in self.params]
 
@@ -276,27 +278,31 @@ class AdamTrainer(object):
             sys.stdout.write('... training\n')
         
         best_epoch = 0
+
+        best_train_cost  = np.inf
         best_train_error = np.inf
+        best_valid_cost  = np.inf
         best_valid_error = np.inf
 
-        last_tr_mean = 0.
+        last_train_error = 0.
 
         start_time = timeit.default_timer()
 
         for epoch in range(1, self.epochs+1):
 
-            curr_tr_mean = self.run_func(train_func, train_input, logging=True, epoch=epoch)
-            diff_tr_mean, last_tr_mean = curr_tr_mean-last_tr_mean, curr_tr_mean
+            curr_train_error, train_cost = self.run_func(train_func, train_input, logging=True, epoch=epoch)
+            diff_train_error, last_train_error = curr_train_error-last_train_error, curr_train_error
 
             output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % \
-                         (epoch, curr_tr_mean, diff_tr_mean)
+                         (epoch, curr_train_error, diff_train_error)
 
-            valid_error = self.run_func(valid_func, valid_input, logging=False)
-            valid_diff = valid_error - best_valid_error
+            valid_error, valid_cost = self.run_func(valid_func, valid_input, logging=False)
 
             if (valid_error is not np.nan):
+                valid_diff = valid_error - best_valid_error
                 output_str += ' validation error: %.5f validation diff: %.5f' % \
                               (valid_error, valid_diff)
+                pass
 
             output_str += ' %s\n' % (str(datetime.now())[11:19])
 
@@ -305,22 +311,27 @@ class AdamTrainer(object):
                 sys.stdout.flush()
 
             # Early stopping
-            if (valid_func and (valid_error < best_valid_error)):
-                best_valid_error = valid_error
-                r_val = best_valid_error
-                best_epoch = epoch
+            if (valid_func):
+                if ((valid_error < best_valid_error) or
+                    (valid_error == best_valid_error and valid_cost < best_valid_cost)):
+                    best_valid_error = valid_error
+                    best_valid_cost  = valid_cost
+                    r_val = best_valid_error
+                    best_epoch = epoch
 
-                # TODO: Don't add time needed to save model to training time
-                network.save(filename)
+                    network.save(filename)
+                    result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
 
-                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
-            elif (curr_tr_mean < best_train_error):
-                best_train_error = curr_tr_mean
+            elif ((curr_train_error < best_train_error) or 
+                 (curr_train_error == best_train_error and train_cost < best_train_cost)):
+                best_train_error = curr_train_error
+                best_train_cost  = train_cost
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
                 result_str = 'Optimization complete. Best train error of %.5f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
+
             else:
                 pass
 
@@ -359,8 +370,8 @@ class AdamTrainer(object):
         np.savez_compressed(filename, test_output=np.array(test_output).flatten())
 
     def set_params(self, alpha=0.001, beta1=0.9, beta2=0.999, l1_weight=0.0, l2_weight=0.1):
-        alpha=alpha; beta1=beta1; beta2=beta2; l1_weight=l1_weight
-        l2_weight=l2_weight
+        self.alpha=alpha; self.beta1=beta1; self.beta2=beta2; self.l1_weight=l1_weight
+        self.l2_weight=l2_weight
 
 class PreTrainer(AdamTrainer):
     """Implements greedy layerwise pre-training as discussed in [1].
@@ -416,7 +427,7 @@ class PreTrainer(AdamTrainer):
             inner_end_time = timeit.default_timer()
 
             sys.stdout.write('\r[Layer %i] 100.0%% training error: %.5f\n' % (iteration, cost))
-            sys.stdout.write('\r[Layer %i] Training took: %.4fm\n' % (iteration, (inner_end_time - inner_start_time) / 60.))
+            sys.stdout.write('\r[Layer %i] Training took: %.2fm\n' % (iteration, (inner_end_time - inner_start_time) / 60.))
 
             pretrained_layers += network.layers
             pretrain_input = self.get_representation(network, rep_input=pretrain_input, depth=len(network.layers)-1)
@@ -426,5 +437,6 @@ class PreTrainer(AdamTrainer):
         end_time = timeit.default_timer()
 
         network.set_layers(pretrained_layers + finetuning_layers)
+        network.save(filename)
         sys.stdout.write('Pretraining complete. Took %.2fm\n\n' % ((end_time - start_time) / 60.))
         sys.stdout.flush()
