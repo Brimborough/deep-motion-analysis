@@ -9,29 +9,29 @@ from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM
 from keras.optimizers import Nadam
 import keras
-from hyperopt import Trials, STATUS_OK, tpe
-from hyperas import optim
-from hyperas.distributions import choice, uniform, conditional
 from keras.utils.data_utils import get_file
 import numpy as np
 import random
 import sys
 import theano
+from theano import function, config, shared, sandbox
+import theano.tensor as T
+import time
 
 
 def model(params):
+    
     '''
     Data providing function:
 
     This function is separated from model() so that hyperopt
     won't reload data for each evaluation run.
     '''
-    data = np.load('../data/Joe/sequential_final_frame.npz')
+    data = np.load('../../data/Joe/sequential_final_frame.npz')
     train_x = data['train_x']
     train_y = data['train_y']
     test_x = data['test_x']
     test_y = data['test_y']
-
 
     drop1 = params['drop1'][0]
     drop2 = params['drop2'][0]
@@ -60,7 +60,8 @@ def model(params):
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam') 
     
-    model.fit(train_x, train_y, batch_size=20, nb_epoch=1, validation_data=(test_x,test_y))
+
+    model.fit(train_x, train_y, batch_size=20, nb_epoch=100, validation_data=(test_x,test_y))
     
     loss = model.evaluate(test_x, test_y, verbose=0)
 
@@ -75,4 +76,5 @@ def model(params):
 def main(job_id, params):
     print('Anything printed here will end up in the output directory for job #%d' % job_id)
     print(params)
+
     return model(params)

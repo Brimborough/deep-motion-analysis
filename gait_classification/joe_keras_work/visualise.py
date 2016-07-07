@@ -21,6 +21,14 @@ def data_util(preds,x):
     d2 = np.concatenate((x[0], d1)) #First X
     return d2
 
+#Load the preprocessed version, saving on computation
+X = np.load('../data/Joe/data_edin_locomotion.npz')['clips']
+X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
+X = X[:,:-4]
+preprocess = np.load('../data/Joe/preprocess.npz')
+X = (X - preprocess['Xmean']) / preprocess['Xstd']
+
+
 data = np.load('../data/Joe/sequential_final_frame.npz')
 train_x = data['train_x']
 train_y = data['train_y']
@@ -60,7 +68,7 @@ network.load([
 
 
 # Run find_frame.py to find which original motion frame is being used.
-#Xorig = X[134:135]
+Xorig = X[134:135]
 
 # Transform dat back to original latent space
 shared = theano.shared(dat).astype(theano.config.floatX)

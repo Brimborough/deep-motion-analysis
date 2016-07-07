@@ -47,7 +47,6 @@ model = Sequential()
 model.add(LSTM(256, return_sequences=False, input_shape=(29, 256), consume_less='cpu', \
                 init='glorot_normal'))
 model.add(Dropout(0.2))
-model.add(Dropout(0.2))
 model.add(Dense(256))
 model.add(Activation('relu'))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!

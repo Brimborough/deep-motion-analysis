@@ -17,6 +17,9 @@ import numpy as np
 import random
 import sys
 import theano
+from theano import function, config, shared, sandbox
+import theano.tensor as T
+import time
 
 
 def model(params):
@@ -26,7 +29,7 @@ def model(params):
     This function is separated from model() so that hyperopt
     won't reload data for each evaluation run.
     '''
-    data = np.load('../data/Joe/sequential_final_frame.npz')
+    data = np.load('../../data/Joe/sequential_final_frame.npz')
     train_x = data['train_x']
     train_y = data['train_y']
     test_x = data['test_x']
@@ -75,16 +78,13 @@ def model(params):
 def main(job_id, params):
     print('Anything printed here will end up in the output directory for job #%d' % job_id)
     print(params)
-    from theano import function, config, shared, sandbox
-    import theano.tensor as T
-    import numpy
-    import time
+
 
     vlen = 10 * 30 * 768  # 10 x #cores x # threads per core
     iters = 1000
 
-    rng = numpy.random.RandomState(22)
-    x = shared(numpy.asarray(rng.rand(vlen), config.floatX))
+    rng = np.random.RandomState(22)
+    x = shared(np.asarray(rng.rand(vlen), config.floatX))
     f = function([], T.exp(x))
     print(f.maker.fgraph.toposort())
     t0 = time.time()
