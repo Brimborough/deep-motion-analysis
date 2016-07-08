@@ -44,15 +44,18 @@ def model(X_train, Y_train, X_test, Y_test):
         - model: specify the model just created so that we can later use it again.
     '''
     model = Sequential()
-    model.add(LSTM(256, return_sequences=True, input_shape=(29, 256), consume_less='gpu', \
+    model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
+    model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+
+    model.add(LSTM(256, return_sequences=True,consume_less='gpu', \
                     init='glorot_normal'))
-    model.add(Dropout({{uniform(0, 0.5)}}))
+    model.add(Dropout({{uniform(0, 0.4)}}))
     model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
-    model.add(Dropout({{uniform(0, 0.5)}}))
-    model.add(LSTM(1024, return_sequences=True, consume_less='gpu', \
+    model.add(Dropout({{uniform(0, 0.4)}}))
+    model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
-    model.add(Dropout({{uniform(0, 0.5)}}))
+    model.add(Dropout({{uniform(0, 0.4)}}))
     model.add(TimeDistributed(Dense(256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam') 
@@ -67,13 +70,8 @@ if __name__ == '__main__':
     best_run = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=10,
+                                          max_evals=100,
                                           trials=Trials())
     X_train, Y_train, X_test, Y_test = data()
     print("Best Run:")
     print(best_run)
-# No eval since generative model, needs all data it can get on already miniture dataset.
-
-#TODO - replace the final 5 frames and see how it does
-#TODO: - Make 2 files, time distributed and just final outputs, as well as 2 input files. Shapes are slightly different.
-
