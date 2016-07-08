@@ -14,7 +14,7 @@ import numpy as np
 import random
 import sys
 import theano
-sys.path.append('../representation_learning/')
+sys.path.append('../../../representation_learning/')
 
 from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
@@ -26,17 +26,17 @@ def data_util(preds,x):
     d2 = np.concatenate((x[0], d1)) #First X
     return d2
 
-data = np.load('../data/Joe/sequential_final_frame.npz')
+data = np.load('../../../data/Joe/sequential_final_frame.npz')
 train_x = data['train_x']
 train_y = data['train_y']
 test_x = data['test_x']
 test_y = data['test_y']
 
 #Load the preprocessed version, saving on computation
-X = np.load('../data/Joe/data_edin_locomotion.npz')['clips']
+X = np.load('../../../data/Joe/data_edin_locomotion.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
-preprocess = np.load('../data/Joe/preprocess.npz')
+preprocess = np.load('../../../data/Joe/preprocess.npz')
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
 
@@ -63,4 +63,4 @@ hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=100, validation_data=
 print(hist.history)
 score = model.evaluate(test_x,test_y)
 print(score)
-
+model.save_weights('../../weights/sequential-0.6.hd5')
