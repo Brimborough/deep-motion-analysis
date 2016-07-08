@@ -6,11 +6,11 @@ class split_data:
     # Can shuffle return new indices, if so save also, for comparison
     def split(self, filename, step, serieslength):
         data = np.load('../data/Joe/HiddenActivations.npz')['Orig']
-
+        print data.shape
         # 30 is the time series length
         data = np.swapaxes(data, 2, 1)
-
-        data_std = np.array([[[data.std()]]]).repeat(data.shape[1], axis=1)
+        
+        data_std = data.std()
         data_mean = data.mean(axis=2).mean(axis=0)[np.newaxis, :, np.newaxis]
 
         np.savez_compressed('../data/Joe/pre_proc_lstm.npz', mean=data_mean, std=data_std)

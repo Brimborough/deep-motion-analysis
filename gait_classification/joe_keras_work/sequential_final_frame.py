@@ -47,10 +47,13 @@ model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                 init='glorot_normal'))
-model.add(Dropout(0.117))
+model.add(Dropout(0.0268))
 model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(Dropout(0.0266))
+model.add(Dropout(0.004))
+model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
+                   init='glorot_normal'))
+model.add(Dropout(0.24))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!

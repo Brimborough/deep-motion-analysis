@@ -43,8 +43,9 @@ X = (X - preprocess['Xmean']) / preprocess['Xstd']
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(keras.layers.noise.GaussianNoise(1))
+model.add(keras.layers.noise.GaussianNoise(1, input_shape=(29,256)))
 model.add(TimeDistributed(Dense(300), input_shape=(29,256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(TimeDistributed(Dense(300)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(600, return_sequences=True, consume_less='gpu', \
@@ -53,7 +54,7 @@ model.add(LSTM(600, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
 model.add(TimeDistributed(Dense(300)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-model.add(TimeDistributed(Dense(300)))
+model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 

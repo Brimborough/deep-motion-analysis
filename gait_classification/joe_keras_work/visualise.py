@@ -55,6 +55,11 @@ for i in range(1):
     preds = model.predict(train_x)[:,-1:] # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
     train_x = np.expand_dims(data_util(preds,train_x),0) #Place together all, then only use the final one
 
+#train_x = np.concatenate([train_x[0:1],train_y[0:1][:,-1:]], axis=1)
+
+pre_lat = np.load('../data/Joe/pre_proc_lstm.npz')
+train_x = (train_x*pre_lat['std']) + pre_lat['mean']
+
 d2 = train_x.swapaxes(2, 1) #Swap back
 dat = d2 #For time distributed
 

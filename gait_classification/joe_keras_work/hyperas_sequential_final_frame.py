@@ -46,7 +46,6 @@ def model(X_train, Y_train, X_test, Y_test):
     model = Sequential()
     model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-
     model.add(LSTM(256, return_sequences=True,consume_less='gpu', \
                     init='glorot_normal'))
     model.add(Dropout({{uniform(0, 0.4)}}))
