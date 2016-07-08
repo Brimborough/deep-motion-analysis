@@ -43,9 +43,16 @@ X = (X - preprocess['Xmean']) / preprocess['Xstd']
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
+<<<<<<< HEAD
 #model.add(keras.layers.noise.GaussianNoise(1, input_shape=(29,256)))
 
 model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
+=======
+model.add(keras.layers.noise.GaussianNoise(1, input_shape=(29,256)))
+model.add(TimeDistributed(Dense(300), input_shape=(29,256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(300)))
+>>>>>>> 293a828828700919b36e0ec8fa11dbc378f90e35
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 #model.add(TimeDistributed(Dense(128)))
 #model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
@@ -54,7 +61,12 @@ model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
 model.add(Dropout(0.25))
 model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
+<<<<<<< HEAD
 model.add(Dropout(0.02))
+=======
+model.add(TimeDistributed(Dense(300)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+>>>>>>> 293a828828700919b36e0ec8fa11dbc378f90e35
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 #model.add(TimeDistributed(Dense(256)))
