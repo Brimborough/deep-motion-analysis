@@ -37,7 +37,7 @@ for layer in network.layers:
 
 
 # Go through inputs 1by1
-for input in [23]:#range(len(X)):
+for input in range(len(X)):
 
     Xorig = X[input:input+1]
 

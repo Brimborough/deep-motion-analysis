@@ -50,5 +50,5 @@ while True:
     Xnois = (Xnois * preprocess['Xstd']) + preprocess['Xmean']
     Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
     
-    animation_plot([Xorig, Xnois, Xrecn], interval=15.15)
+    animation_plot([Xorig, Xnois, Xrecn], interval=15.15, labels=['orig','nois','rec'])
     

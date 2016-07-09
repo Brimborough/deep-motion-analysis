@@ -19,7 +19,7 @@ class split_data:
 
         np.random.shuffle(data)
 
-        train = data[:321]
+        train = data[:310]
         test = data[310:321]
 
         #X is everything but the final one
