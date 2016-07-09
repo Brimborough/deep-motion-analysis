@@ -21,6 +21,7 @@ class HiddenLayer(object):
         if b is None:
             b = np.zeros((self.weights_shape[1],), dtype=theano.config.floatX)
 
+        # Make sure this works for both LadderNetworks
         self.input_units = (W.shape)
         self.output_units = (W.shape)
         
