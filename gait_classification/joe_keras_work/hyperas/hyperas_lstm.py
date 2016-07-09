@@ -48,10 +48,10 @@ def model(X_train, Y_train, X_test, Y_test):
     model.add(TimeDistributed(Dense({{choice([128,256])}}), input_shape=(29,256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.add({{choice([Dropout(0.2), BatchNormalization()])}})
-    model.add(GRU(256, return_sequences=True,consume_less='gpu', \
+    model.add(LSTM(256, return_sequences=True,consume_less='gpu', \
                     init='glorot_normal'))
     model.add({{choice([Dropout(0.2), BatchNormalization()])}})
-    model.add(GRU(256, return_sequences=True, consume_less='gpu', \
+    model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
     model.add({{choice([Dropout(0.2), BatchNormalization()])}})
     model.add(TimeDistributed(Dense(256)))
