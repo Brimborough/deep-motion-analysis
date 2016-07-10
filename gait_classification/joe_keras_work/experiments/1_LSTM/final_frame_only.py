@@ -4,10 +4,11 @@
 '''
 
 from __future__ import print_function
-
+import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM
+from keras.layers.normalization import BatchNormalization
 from keras.utils.data_utils import get_file
 import numpy as np
 import random
@@ -44,13 +45,15 @@ X = (X - preprocess['Xmean']) / preprocess['Xstd']
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
+model.add(Dense(256))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=False, input_shape=(29, 256), consume_less='cpu', \
                 init='glorot_normal'))
-model.add(Dropout(0.2))
+model.add(BatchNormalization())
 model.add(Dense(256))
-model.add(Activation('relu'))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
-model.compile(loss='mean_squared_error', optimizer='adam')
+model.compile(loss='mean_squared_error', optimizer='nadam')
 
 print('Training model...')
 hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=40)
