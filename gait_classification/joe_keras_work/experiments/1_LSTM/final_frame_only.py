@@ -4,10 +4,11 @@
 '''
 
 from __future__ import print_function
-
+import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM
+from keras.layers.normalization import BatchNormalization
 from keras.utils.data_utils import get_file
 import numpy as np
 import random
@@ -27,7 +28,7 @@ def data_util(preds,x):
     d2 = np.concatenate((x[0], d1)) #First X
     return d2
 
-data = np.load('../../../data/Joe/final_frame_data.npz')
+data = np.load('../../../data/Joe/final_frame.npz')
 train_x = data['train_x']
 train_y = data['train_y']
 test_x = data['test_x']
@@ -44,29 +45,31 @@ X = (X - preprocess['Xmean']) / preprocess['Xstd']
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
+model.add(Dense(256))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=False, input_shape=(29, 256), consume_less='cpu', \
                 init='glorot_normal'))
-model.add(Dropout(0.2))
+model.add(BatchNormalization())
 model.add(Dense(256))
-model.add(Activation('relu'))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
-model.compile(loss='mean_squared_error', optimizer='adam')
+model.compile(loss='mean_squared_error', optimizer='nadam')
 
 print('Training model...')
-hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=1)
+hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=40)
 print(hist.history)
 # No eval since generative model, needs all data it can get on already miniture dataset.
 
 #TODO - replace the final 5 frames and see how it does
 #TODO: - Make 2 files, time distributed and just final outputs, as well as 2 input files. Shapes are slightly different.
-
+'''
 for i in range(1):
     preds = model.predict(train_x) # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
     train_x = np.expand_dims(data_util(preds,train_x),0) #Place together all, then only use the final one
 
 d2 = train_x.swapaxes(0, 1) #Swap back, need to concat again?!
-dat = d2 #For time distributed
-#dat = np.expand_dims(d2, 0) #For dense, since it cuts off a dim otherwise
+#dat = d2 #For time distributed
+dat = np.expand_dims(d2, 0) #For dense, since it cuts off a dim otherwise
 
 from network import network
 network.load([
@@ -95,3 +98,4 @@ Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
 Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
 
 animation_plot([Xorig, Xrecn], interval=15.15)
+'''
