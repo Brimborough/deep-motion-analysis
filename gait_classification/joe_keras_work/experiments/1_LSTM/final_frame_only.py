@@ -27,7 +27,7 @@ def data_util(preds,x):
     d2 = np.concatenate((x[0], d1)) #First X
     return d2
 
-data = np.load('../../../data/Joe/final_frame_data.npz')
+data = np.load('../../../data/Joe/final_frame.npz')
 train_x = data['train_x']
 train_y = data['train_y']
 test_x = data['test_x']
