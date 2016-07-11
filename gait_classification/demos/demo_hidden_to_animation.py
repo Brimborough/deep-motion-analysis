@@ -38,20 +38,20 @@ for layer in network.layers:
 
 # Go through inputs 1by1
 for input in range(len(X)):
-
+    input = 50
     Xorig = X[input:input+1]
 
     #Theano shared object to pass to network
     shared = theano.shared(H[input:input+1])
 
     # Recreate
-    Xrecn = np.array(InverseNetwork(network)(shared).eval()).astype(theano.config.floatX)
+    Xrecno = np.array(InverseNetwork(network)(shared).eval()).astype(theano.config.floatX)
 
     #Last 3 - Velocities so similar root
-    Xrecn[:,-3:] = Xorig[:,-3:]
+    Xrecno[:,-3:] = Xorig[:,-3:]
 
     Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
-    Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
+    Xrecno = (Xrecno * preprocess['Xstd']) + preprocess['Xmean']
 
-    animation_plot([Xorig, Xrecn], interval=15.15)
+    animation_plot([Xorig, Xrecno], interval=15.15)
 
