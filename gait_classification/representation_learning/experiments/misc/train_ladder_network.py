@@ -1,10 +1,12 @@
 import numpy as np
+import sys
 import theano
 import theano.tensor as T
 
+sys.path.append('../..')
+
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import AdamTrainer
-#from nn.BatchNormLayer import BatchNormLayer
 from nn.HiddenLayer import HiddenLayer
 from nn.LadderAdamTrainer import *
 from nn.LadderNetwork import LadderNetwork

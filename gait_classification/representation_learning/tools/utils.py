@@ -17,6 +17,8 @@ import theano.tensor as T
 from collections import defaultdict
 from copy import deepcopy
 
+data_path = '/home/masters/jonathan/deep-motion-analysis/gait_classification/data/'
+
 def scale_to_unit_interval(ndar, eps=1e-8):
     """ Scales all values in the ndarray ndar to be between 0 and 1 """
     ndar = ndar.copy()
@@ -295,7 +297,7 @@ def load_styletransfer(rng, split, labels='combined'):
 
     sys.stdout.write('... loading data\n')
 
-    data = np.load('../data/styletransfer/data_styletransfer.npz')
+    data = np.load(data_path + 'styletransfer/data_styletransfer.npz')
 
     clips = data['clips'].swapaxes(1, 2)
     X = clips[:,:-4]
@@ -304,20 +306,17 @@ def load_styletransfer(rng, split, labels='combined'):
     classes = data['classes']
 
     # get mean and std
-    preprocessed = np.load('../data/styletransfer/styletransfer_preprocessed.npz')
+    preprocessed = np.load(data_path + '/styletransfer/styletransfer_preprocessed.npz')
 
     Xmean = preprocessed['Xmean']
     Xmean = Xmean.reshape(1,len(Xmean),1)
     Xstd  = preprocessed['Xstd']
     Xstd = Xstd.reshape(1,len(Xstd),1)
 
-    # TODO: Is this necessary?
-#    Xstd[np.where(Xstd == 0)] = 1
-
     X = (X - Xmean) / (Xstd + 1e-10)
 
     # Motion labels in one-hot vector format
-    Y = np.load('../data/styletransfer/styletransfer_one_hot.npz')[labels]
+    Y = np.load(data_path + 'styletransfer/styletransfer_one_hot.npz')[labels]
 
     # Randomise data
     I = np.arange(len(X))
@@ -329,7 +328,7 @@ def load_styletransfer(rng, split, labels='combined'):
     datasets = fair_split(rng, X, Y, split)
     return datasets
 
-def load_cmu(rng, filename='../data/cmu/data_cmu.npz'):
+def load_cmu(rng, filename = data_path + 'cmu/data_cmu.npz'):
 
     sys.stdout.write('... loading data\n')
 
@@ -359,7 +358,7 @@ def load_cmu(rng, filename='../data/cmu/data_cmu.npz'):
     return [(X,)]
 
 def load_cmu_small(rng):
-    return load_cmu(rng=rng, filename='../data/data_cmu_small.npz')
+    return load_cmu(rng=rng, filename = data_path + 'cmu/data_cmu_small.npz')
 
 def load_mnist(rng):
     ''' Loads the MNIST dataset
@@ -368,7 +367,7 @@ def load_mnist(rng):
     :param dataset: the path to the dataset (here MNIST)
     '''
 
-    dataset = '../data/mnist/mnist.pkl.gz'
+    dataset = data_path + 'mnist/mnist.pkl.gz'
 
     # Download the MNIST dataset if it is not present
     data_dir, data_file = os.path.split(dataset)
@@ -437,37 +436,4 @@ def load_mnist(rng):
     test_set  = one_hot_labels(test_set)
 
     datasets = [train_set, valid_set, test_set]
-    return datasets
-
-def load_dsg(rng, split, fair=True):
-
-    sys.stdout.write('... loading data\n')
-
-    train_data = np.load('../data/dsg/train.npz')
-    test_data  = np.load('../data/dsg/test.npz')
-
-    X      = train_data['x'].astype(theano.config.floatX) 
-    x_test = test_data['x'].astype(theano.config.floatX) 
-
-    train_instances = X.shape[0]
-
-    X = np.concatenate((X, x_test), axis=0).swapaxes(1,3)
-    # Normalise using the moments estimated from both training and test data
-    X = (X - X.mean((0,2,3), keepdims=True)) / (X.std((0,2,3), keepdims=True) + 1e-10)
-
-    x_train = X[:train_instances]
-    x_test  = X[train_instances:]
-    # Dirty hack to get around the batchsize bug
-    x_test  = np.concatenate((x_test, x_test[-1:]), axis=0)
-
-    Y = train_data['t'] 
-    one_hot_labels = np.eye(4)[Y - 1]
-
-    if (fair):
-        datasets = fair_split(rng, x_train, one_hot_labels, split)
-    else:
-        datasets = random_split(rng, x_train, one_hot_labels, split)
-
-    datasets.append((x_test,))
-
     return datasets

@@ -2,6 +2,8 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+sys.path.append('../..')
+
 from nn.ActivationLayer import ActivationLayer
 from nn.DropoutLayer import DropoutLayer
 from nn.Pool1DLayer import Pool1DLayer

@@ -1,9 +1,9 @@
 import numpy as np
+import sys
 import theano
 import theano.tensor as T
 
-import sys
-sys.path.append('../representation_learning/')
+sys.path.append('../..')
 
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import AdamTrainer

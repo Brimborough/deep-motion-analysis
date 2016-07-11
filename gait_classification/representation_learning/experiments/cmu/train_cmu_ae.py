@@ -1,6 +1,9 @@
 import numpy as np
+import sys
 import theano
 import theano.tensor as T
+
+sys.path.append('../..')
 
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import AdamTrainer
@@ -18,9 +21,9 @@ rng = np.random.RandomState(23455)
 shared = lambda d: theano.shared(d, borrow=True)
 
 dataset = load_cmu(rng)
-train_set_x = shared(dataset[0][0])
+train_set_x = shared(dataset[0][0][1000:])
 
-batchsize = 1
+batchsize = 100
 network = AutoEncodingNetwork(Network(
     NoiseLayer(rng, 0.3),
     
@@ -50,8 +53,8 @@ network = AutoEncodingNetwork(Network(
 #                    None, '../models/cmu/30062016/layer_3.npz', None])  # Reshape, Hidden, Activation
 
 trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=50, alpha=0.00001, l1_weight=0.1, l2_weight=0.0, cost='mse')
-trainer.train(network=network, train_input=train_set_x, train_output=train_set_x,
-              filename=[None, '../models/cmu/dAe_v_0/layer_0.npz', None, None,   # Noise, 1. Conv, Activation, Pooling
-                              '../models/cmu/dAe_v_0/layer_1.npz', None, None,   # 2. Conv, Activation, Pooling
-                              '../models/cmu/dAe_v_0/layer_2.npz', None, None,]) # 3. Conv, Activation, Pooling
-#                              None, '../models/cmu/dAe_v_0/layer_3.npz', None]) # Reshape, Hidden, Activation
+trainer.train(network=network, train_input=train_set_x, train_output=train_set_x, filename=None)
+#              filename=[None, '../models/cmu/dAe_v_0/layer_0.npz', None, None,   # Noise, 1. Conv, Activation, Pooling
+#                              '../models/cmu/dAe_v_0/layer_1.npz', None, None,   # 2. Conv, Activation, Pooling
+#                              '../models/cmu/dAe_v_0/layer_2.npz', None, None,]) # 3. Conv, Activation, Pooling
+##                              None, '../models/cmu/dAe_v_0/layer_3.npz', None]) # Reshape, Hidden, Activation

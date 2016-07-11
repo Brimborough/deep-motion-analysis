@@ -3,6 +3,8 @@ import sys
 import theano
 import theano.tensor as T
 
+sys.path.append('../..')
+
 from nn.ActivationLayer import ActivationLayer
 from nn.BinaryTaskTrainer import BinaryTaskTrainer
 from nn.BatchNormLayer import BatchNormLayer
