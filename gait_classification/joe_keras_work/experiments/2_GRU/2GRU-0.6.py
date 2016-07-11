@@ -59,8 +59,12 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
 print('Training model...')
+<<<<<<< HEAD
 hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=20, validation_data=(test_x,test_y))
+=======
+hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y))
+>>>>>>> a59ba909a18104012b55cda03107ea00a64e83b7
 print(hist.history)
 score = model.evaluate(test_x,test_y)
 print(score)
-model.save_weights('../../weights/sequential-0.6.hd5')
+model.save_weights('../../weights/2LSTM-0.6.hd5')
