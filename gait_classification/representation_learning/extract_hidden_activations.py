@@ -3,7 +3,11 @@ import theano
 
 from nn.Network import Network
 from nn.NoiseLayer import NoiseLayer
-from nn.Pool1DLayer import Pool1DLayer
+from nn.Pool1DLayer import Pool1DLay
+import os
+
+#Remove old file
+os.remove('../data/Joe/HiddenActivations.npz')
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
