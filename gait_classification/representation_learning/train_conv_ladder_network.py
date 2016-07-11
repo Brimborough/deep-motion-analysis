@@ -4,7 +4,7 @@ import theano.tensor as T
 
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import *
-from nn.BatchNormLayer import BatchNormLayer, InverseBatchNormLayer
+from nn.LadderAdamTrainer import LadderAdamTrainer
 from nn.Conv2DLayer import Conv2DLayer
 from nn.ConvLadderNetwork import ConvLadderNetwork
 from nn.HiddenLayer import HiddenLayer
