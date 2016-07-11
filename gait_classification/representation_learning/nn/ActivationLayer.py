@@ -18,6 +18,9 @@ class ActivationLayer(object):
             else:
                 self.f = lambda x: T.switch(x<=0,a*x,x)
             self.g = lambda x: x
+        elif f == 'elu':
+            self.f = T.nnet.elu
+            self.g = lambda x: x
         elif f == 'tanh':
             self.f = T.tanh
             self.g = T.arctanh

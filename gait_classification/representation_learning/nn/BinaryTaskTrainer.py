@@ -9,7 +9,6 @@ from AdamTrainer import AdamTrainer
 from Network import AutoEncodingNetwork
 from LadderNetwork import LadderNetwork
 from Param import Param
-
 from datetime import datetime
 
 class BinaryTaskTrainer(AdamTrainer):
@@ -165,7 +164,7 @@ class BinaryTaskTrainer(AdamTrainer):
 
             output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f cost1: %.5f cost2: %.5f' % (epoch, np.mean(tr_errors), np.mean(tr_costs1), np.mean(tr_costs2))
 
-            valid_error = self.run_func(valid_func, valid_input, logging=False)
+            valid_error, valid_cost = self.run_func(valid_func, valid_input, logging=False)
 
             if (valid_error is not np.nan):
                 valid_diff = valid_error - best_valid_error
@@ -178,23 +177,47 @@ class BinaryTaskTrainer(AdamTrainer):
                 sys.stdout.write(output_str)
                 sys.stdout.flush()
 
+#            # Early stopping
+#            if (valid_func and (valid_error < best_valid_error)):
+#                best_valid_error = valid_error
+#                r_val = best_valid_error
+#                best_epoch = epoch
+#
+#                # TODO: Don't add time needed to save model to training time
+#                network.save(filename)
+#
+#                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
+#            elif (curr_tr_mean < best_train_error):
+#                best_train_error = curr_tr_mean
+#                r_val = best_train_error
+#                best_epoch = epoch
+#
+#                network.save(filename)
+#                result_str = 'Optimization complete. Best train error of %.4f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
+#            else:
+#                pass
             # Early stopping
-            if (valid_func and (valid_error < best_valid_error)):
-                best_valid_error = valid_error
-                r_val = best_valid_error
-                best_epoch = epoch
+            if (valid_func):
+                if ((valid_error < best_valid_error) or
+                    (valid_error == best_valid_error and valid_cost < best_valid_cost)):
+                    best_valid_error = valid_error
+                    best_valid_cost  = valid_cost
+                    r_val = best_valid_error
+                    best_epoch = epoch
 
-                # TODO: Don't add time needed to save model to training time
-                network.save(filename)
+                    network.save(filename)
+                    result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
 
-                result_str = 'Optimization complete. Best validation error of %.5f %% obtained at epoch %i\n' % (best_valid_error, best_epoch)
-            elif (curr_tr_mean < best_train_error):
-                best_train_error = curr_tr_mean
+            elif ((curr_train_error < best_train_error) or 
+                 (curr_train_error == best_train_error and train_cost < best_train_cost)):
+                best_train_error = curr_train_error
+                best_train_cost  = train_cost
                 r_val = best_train_error
                 best_epoch = epoch
 
                 network.save(filename)
-                result_str = 'Optimization complete. Best train error of %.4f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
+                result_str = 'Optimization complete. Best train error of %.5f %% obtained at epoch %i\n' % (best_train_error, best_epoch)
+
             else:
                 pass
 

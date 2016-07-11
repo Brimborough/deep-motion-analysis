@@ -1,6 +1,9 @@
 import numpy as np
+import sys
 import theano
 import theano.tensor as T
+
+sys.path.append('../..')
 
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import AdamTrainer, PreTrainer
@@ -33,7 +36,6 @@ test_set_x, test_set_y   = map(shared, datasets[2])
 
 batchsize = 100
 
-#train_set_x = train_set_x.reshape((5000, 1, 28, 28))
 train_set_x = train_set_x.reshape((50000, 1, 28, 28))
 valid_set_x = valid_set_x.reshape((10000, 1, 28, 28))
 test_set_x  = test_set_x.reshape((10000, 1, 28, 28))

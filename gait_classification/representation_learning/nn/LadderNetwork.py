@@ -60,7 +60,7 @@ class LadderNetwork(object):
 
         self.n_units =  [l.output_units for l in self.encoding_layers if (hasattr(l, 'output_units'))]
         # Dimensionality of the input
-        self.n_units.insert(0, self.encoding_layers[0].input_units)
+        self.n_units.insert(0, self.encoding_layers[0].input_units[::-1])
 
         def setToOne(a, idx):
             a[:, idx] = 1.
@@ -70,7 +70,7 @@ class LadderNetwork(object):
         concat = lambda tup, i: list(tup) + [i]
 
         # Parameters needed to learn an optimal denoising function
-        self.A = [Param(setToOne(np.zeros((concat(i[1:], 10)), dtype=theano.config.floatX), [0, 1, 5, 6]), True) for i in self.n_units[::-1]]
+        self.A = [Param(setToOne(np.zeros((concat(i[1:], 10)), dtype=theano.config.floatX), [0, 1, 6]), True) for i in self.n_units[::-1]]
 
         # Parameters of trainable batchnorm layers
         self.gamma = [Param(theano.shared(value=np.ones(concat(i[1:], 10), dtype=theano.config.floatX), borrow=True), True) for i in self.n_units[1:]]
@@ -220,7 +220,6 @@ class LadderNetwork(object):
 
             # Add pre-activations from corresponding layer in the encoder
             z_est[d_index] = self.skip_connect(u, noisy_z, d_index)
-            z_est[d_index] = u
 
             # Used to calculate the denoising cost
             self.reconstructions.append(self.batchnorm(z_est[d_index], mean, std))
