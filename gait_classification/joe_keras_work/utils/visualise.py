@@ -13,12 +13,15 @@ sys.path.append('../../../representation_learning/')
 from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
 
-def data_util(preds,x, sample_num):
-    d1 = preds[sample_num] # - take the first
-    d2 = np.concatenate((x[sample_num,:-28], d1)) #First X
+def data_util(preds,x, num_frame_pred):
+    if num_frame_pred>1:
+        d2 = np.concatenate((x[:,:(-num_frame_pred)+1], preds), axis=1)
+    else:
+        d2 = np.concatenate((x, preds),axis=1)  # First X
     return d2
 
-def visualise(model, weight_file, frame):
+def visualise(model, weight_file, frame, num_frame_pred):
+
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
     X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
@@ -26,29 +29,38 @@ def visualise(model, weight_file, frame):
     preprocess = np.load('../../../data/Joe/preprocess.npz')
     X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
-
+    test=True
     data = np.load('../../../data/Joe/sequential_final_frame.npz')
-    train_x = data['train_x']
-    train_y = data['train_y']
-    test_x = data['test_x']
-    test_y = data['test_y']
+    if(test):
+        data_x = data['test_x']
+        data_y = data['test_y']
+        # If test data add 310 to the frame
+        frame_orig = frame+310
+    else:
+        data_x = data['train_x']
+        data_y = data['train_y']
+        frame_orig = frame
 
     model.load_weights('../../weights/'+str(weight_file))
 
     pre_lat = np.load('../../../data/Joe/pre_proc_lstm.npz')
-    orig = np.concatenate([train_x[1:2],train_y[1:2][:,-1:]], axis=1)
+    if num_frame_pred>1:
+        orig = np.concatenate([data_x[frame:frame+1,:(-num_frame_pred)+1],data_y[frame:frame+1][:,-num_frame_pred:]], axis=1)
+    else:
+       orig = np.concatenate([data_x[frame:frame+1],data_y[frame:frame+1, -1:]], axis=1)
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
-    print(orig.shape)
 
-    for i in range(1):
-        preds = model.predict(train_x)[:,-29:] # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
-        train_x = np.expand_dims(data_util(preds,train_x, 1), frame) #Place together all, then only use the final one
-
+    data_loop = data_x[frame:frame+1]
+    for i in range(50):
+        preds = model.predict(data_loop) # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
+        preds= preds[:,-num_frame_pred:]
+        data_x = data_util(preds,data_loop, num_frame_pred) #Place together all, then only use the final one
+        data_loop = data_x[:, 1:]
     
-    train_x = (train_x*pre_lat['std']) + pre_lat['mean']
+    data_x = (data_x*pre_lat['std']) + pre_lat['mean']
 
-    d2 = train_x.swapaxes(2, 1) #Swap back
+    d2 = data_x.swapaxes(2, 1) #Swap back
     dat = d2 #For time distributed
 
     from network import network
@@ -61,7 +73,7 @@ def visualise(model, weight_file, frame):
 
 
     # Run find_frame.py to find which original motion frame is being used.
-    Xorig = X[frame:frame+1]
+    Xorig = X[frame_orig:frame_orig+1]
 
     # Transform dat back to original latent space
     shared = theano.shared(orig).astype(theano.config.floatX)
@@ -86,5 +98,3 @@ def visualise(model, weight_file, frame):
     Xpred = (Xpred * preprocess['Xstd']) + preprocess['Xmean']
 
     animation_plot([Xorig, Xrecn, Xpred], interval=15.15, labels=['Root','Reconstruction', 'Predicted'])
-
-    #### DOING SO WELL BECUASE IT's OVERFIT!!!!, TRAIN AGAIN!

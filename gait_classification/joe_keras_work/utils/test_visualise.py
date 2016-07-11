@@ -33,12 +33,6 @@ def test_vis(frame):
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
-    not_shuffled = np.load('../../data/Joe/HiddenActivations.npz')['Orig'][frame:frame+1]
-    not_shuffled = not_shuffled.swapaxes(2,1)
-    not_shuffled = (not_shuffled - pre_lat['mean']) / pre_lat['std']
-    not_shuffled = (not_shuffled * pre_lat['std']) + pre_lat['mean']
-    not_shuffled = not_shuffled.swapaxes(1, 2)
-
     from network import network
     network.load([
         None,
@@ -54,25 +48,17 @@ def test_vis(frame):
     # Transform dat back to original latent space
     shared = theano.shared(orig).astype(theano.config.floatX)
 
-    # Transform dat back to original latent space
-    not_shuffled = theano.shared(not_shuffled).astype(theano.config.floatX)
-
     Xrecn = InverseNetwork(network)(shared).eval()
     Xrecn = np.array(Xrecn)
 
-    not_shuffled = InverseNetwork(network)(not_shuffled).eval()
-    not_shuffled = np.array(not_shuffled)
-
     # Last 3 - Velocities so similar root
     Xrecn[:, -3:] = Xorig[:, -3:]
-    not_shuffled[:, -3:] = Xorig[:, -3:]
 
     #Back to original data space
     Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
     Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
-    not_shuffled = (not_shuffled * preprocess['Xstd']) + preprocess['Xmean']
 
-    animation_plot([Xorig, not_shuffled, Xrecn], interval=15.15, labels=['Root', 'Not Shuffled', 'Reconstruction'])
+    animation_plot([Xorig, Xrecn], interval=15.15, labels=['Root', 'Reconstruction'])
 
 
 test_vis(0)
