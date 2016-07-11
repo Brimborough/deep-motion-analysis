@@ -33,9 +33,9 @@ def model(params):
     test_x = data['test_x']
     test_y = data['test_y']
 
-    drop1 = params['drop1'][0]
-    drop2 = params['drop2'][0]
-    lr = params['lr'][0]
+    drop1 = params['drop1'].astype(np.float32)[0]
+    drop2 = params['drop2'].astype(np.float32)[0]
+    lr = params['lr'].astype(np.float32)[0]
 
     '''
     Model providing function:
@@ -74,6 +74,4 @@ def model(params):
 # Write a function like this called 'main'
 def main(job_id, params):
     print('Anything printed here will end up in the output directory for job #%d' % job_id)
-    print(params)
-    params = params.astype(np.float32)
     return model(params)
