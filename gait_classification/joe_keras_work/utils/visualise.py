@@ -20,7 +20,7 @@ def data_util(preds,x, sample_num):
 
 def visualise(model, weight_file, frame):
     #Load the preprocessed version, saving on computation
-    X = np.load('../../../data/Joe/data_edin_locomotion.npz')['clips']
+    X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
     X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
     X = X[:,:-4]
     preprocess = np.load('../../../data/Joe/preprocess.npz')
@@ -43,7 +43,7 @@ def visualise(model, weight_file, frame):
 
     for i in range(1):
         preds = model.predict(train_x)[:,-29:] # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
-        train_x = np.expand_dims(data_util(preds,train_x, 1),0) #Place together all, then only use the final one
+        train_x = np.expand_dims(data_util(preds,train_x, 1), frame) #Place together all, then only use the final one
 
     
     train_x = (train_x*pre_lat['std']) + pre_lat['mean']
