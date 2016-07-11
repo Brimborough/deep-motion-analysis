@@ -13,7 +13,7 @@ class split_data:
         os.remove('../../data/Joe/final_frame.npz')
         os.remove('../../data/Joe/edin_shuffled.npz')
 
-        edin = np.load('../../data/Joe/data_edin_locomotion.npz')
+        edin = np.load('../../data/Joe/data_edin_locomotion.npz')['clips']
         data = np.load('../../data/Joe/HiddenActivations.npz')['Orig']
 
         '''
