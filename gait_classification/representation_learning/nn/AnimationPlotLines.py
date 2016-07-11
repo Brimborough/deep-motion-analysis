@@ -33,9 +33,12 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33)
     
     fig = plt.figure(figsize=(12,8))
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim3d(-scale*30, scale*30)
-    ax.set_zlim3d( 0, scale*60)
-    ax.set_ylim3d(-scale*30, scale*30)
+    ax.set_xlim3d(-scale*50, scale*50)
+    ax.set_zlim3d( 0, scale*40)
+    ax.set_ylim3d(-scale*50, scale*50)
+#    ax.set_xlim3d(-scale*90, scale*90)
+#    ax.set_zlim3d( 0, scale*180)
+#    ax.set_ylim3d(-scale*90, scale*90)
     ax.set_xticks([], [])
     ax.set_yticks([], [])
     ax.set_zticks([], [])
@@ -82,17 +85,19 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33)
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])//2), interval=interval)
-    
+
     if filename != None:
-        #ani.save(filename, fps=30, bitrate=13934)
-        data = {}
-        for i, a, f in zip(range(len(animations)), animations, footsteps):
-            data['anim_%i' % i] = a
-            data['anim_%i_footsteps' % i] = f
-        np.savez_compressed(filename.replace('.mp4','.npz'), **data)
+        ani.save(filename, fps=30, bitrate=13934)
+#        data = {}
+##        for i, a, f in zip(range(len(animations)), animations, footsteps):
+#        for i, a in zip(range(len(animations)), animations):
+#            data['anim_%i' % i] = a
+##            data['anim_%i_footsteps' % i] = f
+#        np.savez_compressed(filename.replace('.mp4','.npz'), **data)
     
     try:
         plt.show()
+        plt.save()
     except AttributeError as e:
         pass
         

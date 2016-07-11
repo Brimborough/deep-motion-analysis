@@ -44,14 +44,19 @@ classes = {-1:'no class',
            23:'walk_left',
            24:'walk_right'}
 
-motion_id1 = np.random.randint(0, 3190)
-motion_id2 = np.random.randint(0, 3190)
+#motion_id1 = np.random.randint(0, 3190)
+#motion_id2 = motion_id1+1#np.random.randint(0, 3190)
+
+motion_id1 = 1035
+#motion_id2 = motion_id1+1#np.random.randint(0, 3190)
+motion_id2 = 1025#np.random.randint(0, 3190)
     
 X1 = X[motion_id1:motion_id1+1]
-X2 = X[motion_id2:motion_id2+1]
+X2 = X[motion_id2:motion_id2+5]
 
-print 'Left motion: %s' % (classes[Y[motion_id1]])
-print 'Right motion: %s' % (classes[Y[motion_id2]])
+print 'Left motion: %s, Id: %i' % (classes[Y[motion_id1]], motion_id1)
+print 'Right motion: %s, Id: %i' % (classes[Y[motion_id2]], motion_id2)
 
-animation_plot([X1, X2], interval=15.15)
+animation_plot([X1, X2], filename='./animation.mp4' , interval=15.15)
+#animation_plot([X1, X2],  interval=15.15)
 
