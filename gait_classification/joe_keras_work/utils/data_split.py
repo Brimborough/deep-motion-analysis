@@ -8,10 +8,14 @@ class split_data:
 
 
         # Remove old files
-        os.remove('../../data/Joe/pre_proc_lstm.npz')
-        os.remove('../../data/Joe/sequential_final_frame.npz')
-        os.remove('../../data/Joe/final_frame.npz')
-        os.remove('../../data/Joe/edin_shuffled.npz')
+        if(os.path.isfile('../../data/Joe/pre_proc_lstm.npz')):
+            os.remove('../../data/Joe/pre_proc_lstm.npz')
+        if (os.path.isfile('../../data/Joe/sequential_final_frame.npz')):
+            os.remove('../../data/Joe/sequential_final_frame.npz')
+        if (os.path.isfile('../../data/Joe/final_frame.npz')):
+            os.remove('../../data/Joe/final_frame.npz')
+        if (os.path.isfile('../../data/Joe/edin_shuffled.npz')):
+            os.remove('../../data/Joe/edin_shuffled.npz')
 
         edin = np.load('../../data/Joe/data_edin_locomotion.npz')['clips']
         data = np.load('../../data/Joe/HiddenActivations.npz')['Orig']
@@ -27,7 +31,7 @@ class split_data:
 
         data, edin = shuffle_in_unison_inplace(data, edin)
 
-        np.savez_compressed('../../data/Joe/edin_shuffled.npz')
+        np.savez_compressed('../../data/Joe/edin_shuffled.npz', clips=edin)
 
         # 30 is the time series length
         data = np.swapaxes(data, 2, 1)
