@@ -21,9 +21,9 @@ shared = lambda d: theano.shared(d, borrow=True)
 
 train_set_x, train_set_y = map(shared, datasets[0])
 valid_set_x, valid_set_y = map(shared, datasets[1])
-test_set_x, test_set_y   = map(shared, datasets[2])
+#test_set_x, test_set_y   = map(shared, datasets[2])
 
-def run_network(alpha = 0.00001, n_hidden = 100):
+def run_network(alpha = 0.00001, n_hidden = 10):
 
     network = Network(
         HiddenLayer(rng, (784, n_hidden)),
@@ -41,7 +41,9 @@ def run_network(alpha = 0.00001, n_hidden = 100):
 
     return best_val
 
-# Called by Spearmint
+## Called by Spearmint
 def main(job_id, params):
-    return run_network(params['alpha'], int(params['n_hidden']))
+    alpha = params['alpha']
+    n_hidden = params['n_hidden']
 
+    return run_network(float(alpha), int(n_hidden))

@@ -1,0 +1,27 @@
+{
+    "language"        : "PYTHON",
+    "main-file"       : "train_mlp.py",
+    "experiment-name" : "example4",
+    "likelihood"      : "NOISELESS",
+    "resources" : {
+        "my-machine" : {
+            "scheduler"         : "local",
+            "max-concurrent"    : 1,
+            "max-finished-jobs" : 2
+        }
+    },
+    "variables" : {
+        "alpha" : {
+            "type" : "FLOAT",
+            "size" : 1,
+            "min"  : 1e-5,
+            "max"  : 0.001
+        },
+        "n_hidden" : {
+            "type" : "INT",
+            "size" : 1,
+            "min"  : 10,
+            "max"  : 1000
+        }
+    }
+}
