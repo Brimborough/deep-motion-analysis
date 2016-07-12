@@ -15,7 +15,7 @@ from nn.NoiseLayer import NoiseLayer
 from nn.Pool1DLayer import Pool1DLayer
 from nn.ReshapeLayer import ReshapeLayer
 
-from tools.utils import load_hdm05_easy, load_hdm05_easy_small
+from tools.utils import *
 
 rng = np.random.RandomState(23455)
 
