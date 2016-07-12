@@ -17,10 +17,10 @@ def data_util(preds,x, num_frame_pred):
     if num_frame_pred>1:
         d2 = np.concatenate((x[:,:(-num_frame_pred)+1], preds), axis=1)
     else:
-        d2 = np.concatenate((x, preds),axis=1)  # First X
+        d2 = np.concatenate((x, preds),axis=1)
     return d2
 
-def visualise(model, weight_file, frame, num_frame_pred):
+def visualise(model, weight_file, frame=0 , num_frame_pred=1):
 
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
@@ -29,6 +29,7 @@ def visualise(model, weight_file, frame, num_frame_pred):
     preprocess = np.load('../../../data/Joe/preprocess.npz')
     X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
+    # Set if using test set.
     test=True
     data = np.load('../../../data/Joe/sequential_final_frame.npz')
     if(test):
@@ -41,9 +42,11 @@ def visualise(model, weight_file, frame, num_frame_pred):
         data_y = data['train_y']
         frame_orig = frame
 
+    #Load model
     model.load_weights('../../weights/'+str(weight_file))
-
     pre_lat = np.load('../../../data/Joe/pre_proc_lstm.npz')
+
+    # Original data set not used in prediction, a check to see what data should look like.
     if num_frame_pred>1:
         orig = np.concatenate([data_x[frame:frame+1,:(-num_frame_pred)+1],data_y[frame:frame+1][:,-num_frame_pred:]], axis=1)
     else:
@@ -51,17 +54,26 @@ def visualise(model, weight_file, frame, num_frame_pred):
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
+    # To keep shape [1,29,256] allows for easy looping
     data_loop = data_x[frame:frame+1]
-    for i in range(50):
-        preds = model.predict(data_loop) # SHAPE - [321,29,256], want final prediction, use -1 for time distributed.
-        preds= preds[:,-num_frame_pred:]
-        data_x = data_util(preds,data_loop, num_frame_pred) #Place together all, then only use the final one
-        data_loop = data_x[:, 1:]
+    old_preds = data_loop[:,-1:]
+    for i in range(32):
+        preds = model.predict(data_loop) # SHAPE - [1,29,256].
+        preds = preds[:,-num_frame_pred:] # Final frame prediction
+        """
+            Assert:
+                that the final data_loop is not equal to the new prediction
+                that the final data_loop is equal to the old prediction
+        """
+        assert not (np.array_equal(preds, data_loop[:,-1:])), "final frame equal to the prediction :S"
+        assert (np.array_equal(old_preds, data_loop[:, -1:])), "final frame not equal to the old prediction :S"
+        data_x = data_util(preds, data_loop, num_frame_pred) # concat final frame prediction and data so far
+        data_loop = data_x[:, 1:] # Remove the 1st frame so we can loop again
+        old_preds = preds
     
-    data_x = (data_x*pre_lat['std']) + pre_lat['mean']
+    data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
 
-    d2 = data_x.swapaxes(2, 1) #Swap back
-    dat = d2 #For time distributed
+    dat = data_x.swapaxes(2, 1) # Swap back axes
 
     from network import network
     network.load([

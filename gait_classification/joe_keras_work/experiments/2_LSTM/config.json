@@ -1,0 +1,40 @@
+{
+    "language"        : "PYTHON",
+    "experiment-name" : "Test-2-LSTM-Layers",
+    "polling-time"    : 1,
+    "resources" : {
+        "my-machine" : {
+            "scheduler"         : "local",
+            "max-concurrent"    : 1,
+            "max-finished-jobs" : 100
+        }
+    },
+    "tasks": {
+        "2LSTM-sm" : {
+            "type"       : "OBJECTIVE",
+            "likelihood" : "NOISELESS",
+            "main-file"  : "2LSTM-sm.py",
+            "resources"  : ["my-machine"]
+        }
+    },
+    "variables": {
+"drop1": {
+"type": "FLOAT",
+"size": 1,
+"min": 0,
+"max": 0.5
+},
+"drop2": {
+"type": "FLOAT",
+"size": 1,
+"min": 0,
+"max": 0.5
+},
+"lr": {
+"type": "FLOAT",
+"size": 1,
+"min": 0.0002,
+"max": 0.3
+}
+}
+}
