@@ -63,7 +63,7 @@ def model(params):
 
     loss = model.evaluate(test_x, test_y, verbose=0)
 
-    return loss
+    return abs(loss)
 
 
 

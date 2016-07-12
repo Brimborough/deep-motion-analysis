@@ -20,7 +20,7 @@ def data_util(preds,x, num_frame_pred):
         d2 = np.concatenate((x, preds),axis=1)
     return d2
 
-def visualise(model, weight_file, frame=0 , num_frame_pred=1):
+def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240):
 
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
@@ -104,9 +104,12 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1):
     Xrecn[:, -3:] = Xorig[:, -3:]
     Xpred[:, -3:] = Xorig[:, -3:]
 
+
     #Back to original data space
-    Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
-    Xrecn = (Xrecn * preprocess['Xstd']) + preprocess['Xmean']
-    Xpred = (Xpred * preprocess['Xstd']) + preprocess['Xmean']
+    Xorig = ((Xorig * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+    Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+    Xpred = ((Xpred * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+
+    print(Xorig.shape)
 
     animation_plot([Xorig, Xrecn, Xpred], interval=15.15, labels=['Root','Reconstruction', 'Predicted'])
