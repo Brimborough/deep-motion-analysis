@@ -74,7 +74,6 @@ class LadderAdamTrainer(AdamTrainer):
         cost = self.cost(network, coding_dist, output) + self.l1_weight * self.l1_regularization(network) + \
                                                          self.l2_weight * self.l2_regularization(network)
 
-        us = cost
         # unsupervised cost
         us = self.unsupervised_cost(network)
         cost += us
@@ -178,6 +177,9 @@ class LadderAdamTrainer(AdamTrainer):
             for bii, bi in enumerate(train_batchinds):
                 tr_cost, tr_error, us = train_func(bi)
                 tr_us.append(us)
+
+#                print us.shape
+#                exit()
 
                 # tr_error might be nan for a batch without labels in semi-supervised learning
                 if not np.isnan(tr_error):
