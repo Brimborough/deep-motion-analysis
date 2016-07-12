@@ -1,6 +1,6 @@
 import numpy as np
 import os, sys, inspect
-sys.path.append('../representation_learning/')
+sys.path.append('../../representation_learning/')
 
 # Stick figures
 from nn.AnimationPlotLines import animation_plot

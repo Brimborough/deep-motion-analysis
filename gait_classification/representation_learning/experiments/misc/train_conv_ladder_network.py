@@ -8,7 +8,6 @@ sys.path.append('../..')
 from nn.ActivationLayer import ActivationLayer
 from nn.AdamTrainer import *
 from nn.LadderAdamTrainer import LadderAdamTrainer
-from nn.BatchNormLayer import BatchNormLayer
 from nn.Conv2DLayer import Conv2DLayer
 from nn.ConvLadderNetwork import ConvLadderNetwork
 from nn.HiddenLayer import HiddenLayer

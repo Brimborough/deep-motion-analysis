@@ -14,10 +14,10 @@ import sys
 import theano
 import theano.tensor as T
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from copy import deepcopy
 
-data_path = '/home/masters/jonathan/deep-motion-analysis/gait_classification/data/'
+data_path = '/home/jona/git/deep-motion-analysis/gait_classification/data/'
 
 def scale_to_unit_interval(ndar, eps=1e-8):
     """ Scales all values in the ndarray ndar to be between 0 and 1 """
@@ -293,7 +293,61 @@ def random_split(rng, data, one_hot_labels, proportions):
 
     return datasets
 
-def load_styletransfer(rng, split, labels='combined'):
+
+def load_hdm05(rng, split=(0.6, 0.2, 0.2), fair=True, filename = data_path + 'hdm05/data_hdm05.npz'):
+
+    sys.stdout.write('... loading data\n')
+
+    data = np.load(filename)
+
+    clips = data['clips'].swapaxes(1, 2)
+    classes = data['classes']
+
+
+    # Remove unlabeled data
+    X = clips[classes != -1]
+    Y = classes[classes != -1]
+
+    # Set up labels
+    Y = np.eye(len(np.unique(Y)))[Y]
+
+    # Set up data
+    X = X[:,:-4].astype(theano.config.floatX)
+
+    Xmean = X.mean(axis=2).mean(axis=0)[np.newaxis,:,np.newaxis]
+    Xmean[:,-3:] = 0.0
+
+    Xstd = np.array([[[X.std()]]]).repeat(X.shape[1], axis=1)
+    Xstd[:,-3:-1] = X[:,-3:-1].std()
+    Xstd[:,-1:  ] = X[:,-1:  ].std()
+
+    X = (X - Xmean) / (Xstd + 1e-10)
+
+    # Randomise data
+    I = np.arange(len(X))
+    rng.shuffle(I) 
+
+    X = X[I].astype(theano.config.floatX)
+    Y = Y[I].astype(theano.config.floatX)
+
+    # Split data and keep classes balanced
+    datasets = fair_split(rng, X, Y, split)
+
+    return datasets
+
+def load_hdm05_small(rng, split = (0.6, 0.2, 0.2), fair = True):
+    return load_hdm05(rng = rng, split = split, fair = fair, 
+                      filename = data_path + 'hdm05/data_hdm05_small.npz')
+
+def load_hdm05_easy(rng, split = (0.6, 0.2, 0.2), fair = True):
+    return load_hdm05(rng = rng, split = split, fair = fair, 
+                      filename = data_path + 'hdm05/data_hdm05_easy.npz')
+
+def load_hdm05_easy_small(rng, split = (0.6, 0.2, 0.2), fair = True):
+    return load_hdm05(rng = rng, split = split, fair = fair, 
+                      filename = data_path + 'hdm05/data_hdm05_easy_small.npz')
+
+def load_styletransfer(rng, split=(0.6, 0.2, 0.2), labels='combined'):
 
     sys.stdout.write('... loading data\n')
 
@@ -346,13 +400,11 @@ def load_cmu(rng, filename = data_path + 'cmu/data_cmu.npz'):
     Xstd[:,-3:-1] = X[:,-3:-1].std()
     Xstd[:,-1:  ] = X[:,-1:  ].std()
 
-    Xstd[np.where(Xstd == 0)] = 1
-
     X = (X - Xmean) / (Xstd + 1e-10)
 
     # Randomise data
     I = np.arange(len(X))
-    rng.shuffle(I); 
+    rng.shuffle(I) 
     X = X[I]
 
     return [(X,)]

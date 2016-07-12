@@ -3,6 +3,7 @@
 *.npz
 *.pkl.gz
 *.arff
+*.zip
 
 # Models
 ###################
