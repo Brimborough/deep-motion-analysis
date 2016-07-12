@@ -27,7 +27,7 @@ def model(params):
     This function is separated from model() so that hyperopt
     won't reload data for each evaluation run.
     '''
-    data = np.load('../../data/Joe/sequential_final_frame.npz')
+    data = np.load('../../../../data/Joe/sequential_final_frame.npz')
     train_x = data['train_x']
     train_y = data['train_y']
     test_x = data['test_x']
