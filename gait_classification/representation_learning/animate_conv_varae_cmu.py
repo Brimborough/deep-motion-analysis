@@ -16,11 +16,9 @@ from tools.utils import load_cmu, load_cmu_small
 rng = np.random.RandomState(23455)
 
 BATCH_SIZE = 1
-
 network = Network(
     
     Network(
-    	DropoutLayer(rng, 0.25),
         Conv1DLayer(rng, (64, 66, 25), (BATCH_SIZE, 66, 240)),
         Pool1DLayer(rng, (2,), (BATCH_SIZE, 64, 240)),
         ActivationLayer(rng),
@@ -48,13 +46,21 @@ network = Network(
 )
 
 shared = lambda d: theano.shared(d, borrow=True)
-dataset, std, mean = load_cmu(rng)
+dataset, std, mean = load_cmu_small(rng)
 E = shared(dataset[0][0])
+
+network.load([['../models/cmu/conv_varae/v_0/layer_0.npz', None, None, 
+                                        None, '../models/cmu/conv_varae/v_0/layer_1.npz', None, None,],
+                                        [None,],
+                                        [None, None, '../models/cmu/conv_varae/v_0/layer_3.npz', None,
+                                        None, None, '../models/cmu/conv_varae/v_0/layer_4.npz',],])
+
+
 
 def cost(networks, X, Y):
     network_u, network_v, network_d = networks.layers
     
-    vari_amount = 0.2
+    vari_amount = 0.0
     repr_amount = 1.0
     
     H = network_u(X)
@@ -66,16 +72,15 @@ def cost(networks, X, Y):
     return repr_amount * repr_cost + vari_amount * vari_cost
 
 trainer = AdamTrainer(rng, batchsize=BATCH_SIZE, epochs=50, alpha=0.00001, cost=cost)
-trainer.train(network, E, E, filename=[[None, '../models/cmu/conv_varae/v_2/layer_0.npz', None, None, 
-                            			None, '../models/cmu/conv_varae/v_2/layer_1.npz', None, None,],
-                            			[None,],
-                              			[None, None, '../models/cmu/conv_varae/v_2/layer_3.npz', None,
-                              			None, None, '../models/cmu/conv_varae/v_2/layer_4.npz',],])
-
 result = trainer.get_representation(network, E, 2)  * (std + 1e-10) + mean
 
-new1 = result[370:371]
-new2 = result[470:471]
-new3 = result[570:571]
+print result.shape
 
-animation_plot([new1, new2, new3], interval=15.15)
+dataset_ = dataset[0][0] * (std + 1e-10) + mean
+
+new1 = result[370:371]
+new2 = dataset_[370:371]
+#new3 = result[470:471]
+
+animation_plot([new1, new2], interval=15.15)
+

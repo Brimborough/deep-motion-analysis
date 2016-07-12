@@ -15,7 +15,7 @@ BATCH_SIZE = 1
 network = Network(
     
     Network(
-        DropoutLayer(rng, 0.25),    
+        #DropoutLayer(rng, 0.25),    
         Conv1DLayer(rng, (64, 66, 25), (BATCH_SIZE, 66, 240)),
         Pool1DLayer(rng, (2,), (BATCH_SIZE, 64, 240)),
         ActivationLayer(rng),
@@ -40,5 +40,4 @@ network = Network(
         DropoutLayer(rng, 0.25),    
         Conv1DLayer(rng, (66, 64, 25), (BATCH_SIZE, 64, 240)),
     )
-    
 )

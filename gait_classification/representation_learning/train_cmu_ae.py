@@ -17,7 +17,7 @@ rng = np.random.RandomState(23455)
 
 shared = lambda d: theano.shared(d, borrow=True)
 
-dataset = load_cmu(rng)
+dataset, std, mean = load_cmu(rng)
 train_set_x = shared(dataset[0][0])
 
 batchsize = 1
@@ -51,7 +51,19 @@ network = AutoEncodingNetwork(Network(
 
 trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=50, alpha=0.00001, l1_weight=0.1, l2_weight=0.0, cost='mse')
 trainer.train(network=network, train_input=train_set_x, train_output=train_set_x,
-              filename=[None, '../models/cmu/dAe_v_0/layer_0.npz', None, None,   # Noise, 1. Conv, Activation, Pooling
-                              '../models/cmu/dAe_v_0/layer_1.npz', None, None,   # 2. Conv, Activation, Pooling
-                              '../models/cmu/dAe_v_0/layer_2.npz', None, None,]) # 3. Conv, Activation, Pooling
+              filename=[None, '../models/cmu/conv_ae/v_0/layer_0.npz', None, None,   # Noise, 1. Conv, Activation, Pooling
+                              '../models/cmu/conv_ae/v_0/layer_1.npz', None, None,   # 2. Conv, Activation, Pooling
+                              '../models/cmu/conv_ae/v_0/layer_2.npz', None, None,]) # 3. Conv, Activation, Pooling
 #                              None, '../models/cmu/dAe_v_0/layer_3.npz', None]) # Reshape, Hidden, Activation
+
+result = trainer.get_representation(network, E, len(network.layers) - 1)  * (std + 1e-10) + mean
+
+print result.shape
+
+dataset_ = dataset[0][0] * (std + 1e-10) + mean
+
+new1 = result[370:371]
+new2 = result[470:471]
+new3 = result[570:571]
+
+animation_plot([new1, new2, new3], interval=15.15)
