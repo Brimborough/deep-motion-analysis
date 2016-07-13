@@ -31,4 +31,4 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
-visualise(model, '2LSTM-0.6.hd5', frame=6, num_frame_pred=1)
+visualise(model, '2LSTM-0.6.hd5', frame=6, num_frame_pred=1, num_pred_iter=50, anim_frame_start=0)

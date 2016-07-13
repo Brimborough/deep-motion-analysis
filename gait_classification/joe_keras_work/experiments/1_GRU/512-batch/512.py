@@ -62,7 +62,7 @@ def model(params):
     model.fit(train_x, train_y, batch_size=b1, nb_epoch=100, callbacks=[earlyStopping], validation_data=(test_x,test_y))
 
     loss = model.evaluate(test_x, test_y, verbose=0)
-
+    
     return abs(loss)
 
 

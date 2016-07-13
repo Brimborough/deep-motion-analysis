@@ -20,7 +20,7 @@ def data_util(preds,x, num_frame_pred):
         d2 = np.concatenate((x, preds),axis=1)
     return d2
 
-def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240):
+def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10):
 
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
@@ -57,7 +57,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     # To keep shape [1,29,256] allows for easy looping
     data_loop = data_x[frame:frame+1]
     old_preds = data_loop[:,-1:]
-    for i in range(32):
+    for i in range(num_pred_iter):
         preds = model.predict(data_loop) # SHAPE - [1,29,256].
         preds = preds[:,-num_frame_pred:] # Final frame prediction
         """

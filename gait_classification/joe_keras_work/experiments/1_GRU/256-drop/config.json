@@ -20,7 +20,7 @@
 "drop1": {
 "type": "FLOAT",
 "size": 1,
-"min": 0,
+"min": 0.099,
 "max": 0.3
 }
 }

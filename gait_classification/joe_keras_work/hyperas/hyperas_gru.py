@@ -45,19 +45,18 @@ def model(X_train, Y_train, X_test, Y_test):
         - model: specify the model just created so that we can later use it again.
     '''
     model = Sequential()
-    model.add(TimeDistributed(Dense({{choice([128,256])}}), input_shape=(29,256)))
+    model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-    model.add({{choice([Dropout(0.2), BatchNormalization()])}})
     model.add(GRU(256, return_sequences=True,consume_less='gpu', \
                     init='glorot_normal'))
-    model.add({{choice([Dropout(0.2), BatchNormalization()])}})
-    model.add(GRU(256, return_sequences=True, consume_less='gpu', \
+    model.add(Dropout({{uniform(0,1)}}))
+    model.add(GRU(512, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
-    model.add({{choice([Dropout(0.2), BatchNormalization()])}})
+    model.add(Dropout({{uniform(0,1)}}))
     model.add(TimeDistributed(Dense(256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam') 
-    hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=50, validation_data=(test_x,test_y))
+    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y))
     score = model.evaluate(test_x, test_y, verbose=0)
 
     print('Test Score:', score)
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     best_run = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=200,
+                                          max_evals=50,
                                           trials=Trials())
     X_train, Y_train, X_test, Y_test = data()
     print("Best Run:")

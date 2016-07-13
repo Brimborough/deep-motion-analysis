@@ -1,0 +1,36 @@
+Job launching after 0.15 seconds in submission.
+Running python job.
+Changed into dir C:\Users\Vicon\Documents\Github\Joe\deep-motion-analysis\gait_classification\joe_keras_work\experiments\1_LSTM\128-drop
+Importing 128.py
+Using Theano backend.
+Running 128.main()
+Traceback (most recent call last):
+  File "c:\users\vicon\documents\github\joe\spearmint\spearmint/launcher.py", line 243, in launch
+    result = python_launcher(job)
+  File "c:\users\vicon\documents\github\joe\spearmint\spearmint/launcher.py", line 327, in python_launcher
+    result = module.main(job['id'], params)
+  File "C:\Users\Vicon\Documents\Github\Joe\deep-motion-analysis\gait_classification\joe_keras_work\experiments\1_LSTM\128-drop\128.py", line 72, in main
+    return model(params)
+  File "C:\Users\Vicon\Documents\Github\Joe\deep-motion-analysis\gait_classification\joe_keras_work\experiments\1_LSTM\128-drop\128.py", line 61, in model
+    model.fit(train_x, train_y, batch_size=20, nb_epoch=100, callbacks=[earlyStopping], validation_data=(test_x,test_y))
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\keras\models.py", line 408, in fit
+    sample_weight=sample_weight)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\keras\engine\training.py", line 1052, in fit
+    self._make_train_function()
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\keras\engine\training.py", line 677, in _make_train_function
+    **self._function_kwargs)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\keras\backend\theano_backend.py", line 535, in function
+    return Function(inputs, outputs, updates=updates, **kwargs)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\keras\backend\theano_backend.py", line 521, in __init__
+    **kwargs)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\theano\compile\function.py", line 322, in function
+    output_keys=output_keys)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\theano\compile\pfunc.py", line 443, in pfunc
+    no_default_updates=no_default_updates)
+  File "C:\Users\Vicon\Anaconda2\lib\site-packages\theano\compile\pfunc.py", line 208, in rebuild_collect_shared
+    raise TypeError(err_msg, err_sug)
+TypeError: ('An update must have the same type as the original shared variable (shared_var=<TensorType(float32, matrix)>, shared_var.type=TensorType(float32, matrix), update_val=Elemwise{add,no_inplace}.0, update_val.type=TensorType(float64, matrix)).', 'If the difference is related to the broadcast pattern, you can call the tensor.unbroadcast(var, axis_to_unbroadcast[, ...]) function to remove broadcastable dimensions.')
+Problem executing the function
+Job failed in 5.60 seconds.
+Anything printed here will end up in the output directory for job #29
+(<type 'exceptions.TypeError'>, TypeError('An update must have the same type as the original shared variable (shared_var=<TensorType(float32, matrix)>, shared_var.type=TensorType(float32, matrix), update_val=Elemwise{add,no_inplace}.0, update_val.type=TensorType(float64, matrix)).', 'If the difference is related to the broadcast pattern, you can call the tensor.unbroadcast(var, axis_to_unbroadcast[, ...]) function to remove broadcastable dimensions.'), <traceback object at 0x00000000176296C8>)

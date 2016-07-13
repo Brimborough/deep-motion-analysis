@@ -59,7 +59,7 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
 print('Training model...')
-hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, callbacks=[keras.callbacks.EarlyStopping()], \
+hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, callbacks=[keras.callbacks.EarlyStopping(patience=50)], \
                     validation_data=(test_x,test_y))
 print(hist.history)
 score = model.evaluate(test_x,test_y)
