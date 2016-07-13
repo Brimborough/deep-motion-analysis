@@ -22,4 +22,5 @@ gait_classification/joe_keras_work/weights
 *.xml
 *.txt
 *.h5
+*.out
 
