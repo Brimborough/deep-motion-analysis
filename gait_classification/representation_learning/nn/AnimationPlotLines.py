@@ -84,12 +84,12 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33)
         animate, np.arange(len(animations[0])//2), interval=interval)
     
     if filename != None:
-        #ani.save(filename, fps=30, bitrate=13934)
+        ani.save(filename, fps=30, bitrate=13934)
         data = {}
-        for i, a, f in zip(range(len(animations)), animations, footsteps):
-            data['anim_%i' % i] = a
-            data['anim_%i_footsteps' % i] = f
-        np.savez_compressed(filename.replace('.mp4','.npz'), **data)
+        #for i, a, f in zip(range(len(animations)), animations, footsteps):
+        #    data['anim_%i' % i] = a
+        #    data['anim_%i_footsteps' % i] = f
+        #np.savez_compressed(filename.replace('.mp4','.npz'), **data)
     
     try:
         plt.show()
