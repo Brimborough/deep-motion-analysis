@@ -110,6 +110,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
     Xpred = ((Xpred * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
 
-    print(Xorig.shape)
+
 
     animation_plot([Xorig, Xrecn, Xpred], interval=15.15, labels=['Root','Reconstruction', 'Predicted'])
