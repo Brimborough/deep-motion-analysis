@@ -20,4 +20,4 @@ gait_classification/mess
 ###################
 *.xml
 *.txt
-
+*.out
