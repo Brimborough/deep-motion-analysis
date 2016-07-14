@@ -11,6 +11,7 @@
 gait_classification/models
 gait_classification/data
 gait_classification/mess
+gait_classification/joe_keras_work/weights
 
 # Python
 ###################
@@ -21,3 +22,5 @@ gait_classification/mess
 *.xml
 *.txt
 *.out
+*.h5
+

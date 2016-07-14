@@ -1,0 +1,27 @@
+{
+    "language"        : "PYTHON",
+    "experiment-name" : "Test-1-128b-LSTM",
+    "resources" : {
+        "my-machine" : {
+            "scheduler"         : "local",
+            "max-concurrent"    : 1,
+            "max-finished-jobs" : 20
+        }
+    },
+    "tasks": {
+        "2LSTM-sm" : {
+            "type"       : "OBJECTIVE",
+            "likelihood" : "NOISELESS",
+            "main-file"  : "128.py",
+            "resources"  : ["my-machine"]
+        }
+    },
+    "variables": {
+"b1": {
+"type": "FLOAT",
+"size": 1,
+"min": 1,
+"max": 30
+}
+}
+}

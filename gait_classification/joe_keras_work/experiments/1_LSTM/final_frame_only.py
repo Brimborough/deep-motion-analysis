@@ -45,9 +45,7 @@ X = (X - preprocess['Xmean']) / preprocess['Xstd']
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(Dense(256))
-model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-model.add(LSTM(256, return_sequences=False, input_shape=(29, 256), consume_less='cpu', \
+model.add(LSTM(256, return_sequences=False, input_shape=(29, 256), consume_less='gpu', \
                 init='glorot_normal'))
 model.add(BatchNormalization())
 model.add(Dense(256))
