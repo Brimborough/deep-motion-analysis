@@ -40,7 +40,7 @@ class split_data:
         data_std = data.std()
         data_mean = data.mean(axis=2).mean(axis=0)[np.newaxis, :, np.newaxis]
 
-        np.savez_compressed('../../datapre_proc_lstm_edin_hdm05.npz', mean=data_mean, std=data_std)
+        np.savez_compressed('../../data/pre_proc_lstm_edin_hdm05.npz', mean=data_mean, std=data_std)
 
         data = (data - data_mean) / data_std
 
