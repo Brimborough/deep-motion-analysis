@@ -1,7 +1,6 @@
 {
     "language"        : "PYTHON",
     "experiment-name" : "Test-2-LSTM-Layers",
-    "polling-time"    : 1,
     "resources" : {
         "my-machine" : {
             "scheduler"         : "local",
