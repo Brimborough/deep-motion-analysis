@@ -20,10 +20,11 @@ def data_util(preds,x, num_frame_pred):
         d2 = np.concatenate((x, preds),axis=1)
     return d2
 
-def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10):
+def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10,\
+        orig_file='Joe/edin_shuffled.npz', pre_lstm='Joe/pre_proc_lstm.npz', extracted='Joe/sequential_final_frame.npz' ,test_start=310):
 
     #Load the preprocessed version, saving on computation
-    X = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
+    X = np.load('../../../data/'+orig_file)['clips']
     X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
     X = X[:,:-4]
     preprocess = np.load('../../../data/Joe/preprocess.npz')
@@ -31,20 +32,21 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
     # Set if using test set.
     test=True
-    data = np.load('../../../data/Joe/sequential_final_frame.npz')
+    data = np.load('../../../data/' + extracted)
+    print(data.keys())
     if(test):
         data_x = data['test_x']
         data_y = data['test_y']
         # If test data add 310 to the frame
-        frame_orig = frame+310
+        frame_orig = frame+test_start
     else:
         data_x = data['train_x']
         data_y = data['train_y']
         frame_orig = frame
 
     #Load model
-    model.load_weights('../../weights/'+str(weight_file))
-    pre_lat = np.load('../../../data/Joe/pre_proc_lstm.npz')
+    model.load_weights('../../weights/'+ weight_file)
+    pre_lat = np.load('../../../data/' + pre_lstm)
 
     # Original data set not used in prediction, a check to see what data should look like.
     if num_frame_pred>1:
