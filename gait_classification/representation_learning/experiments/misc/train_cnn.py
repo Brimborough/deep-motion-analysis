@@ -54,7 +54,7 @@ network = Network(
 #pre_trainer = PreTrainer(rng=rng, batchsize=batchsize, epochs=1, alpha=0.01, cost='mse')
 #pre_trainer.pretrain(network=network, pretrain_input=train_set_x, filename=None, logging=False)
 
-trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=5, alpha=0.01, cost='cross_entropy')
+trainer = AdamTrainer(rng=rng, batchsize=batchsize, epochs=2, alpha=0.1, cost='cross_entropy')
 trainer.train(network=network, train_input=train_set_x, train_output=train_set_y,
                                valid_input=valid_set_x, valid_output=valid_set_y,
                                filename=None, logging=True)
@@ -68,4 +68,4 @@ trainer.train(network=network, train_input=train_set_x, train_output=train_set_y
 #                       filename=None, logging=False)
 
 # Test set performance
-trainer.eval(network=network, eval_input=test_set_x, eval_output=test_set_y, filename=None, logging=True)
+#trainer.eval(network=network, eval_input=test_set_x, eval_output=test_set_y, filename=None, logging=True)

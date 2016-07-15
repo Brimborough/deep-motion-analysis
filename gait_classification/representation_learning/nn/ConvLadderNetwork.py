@@ -7,6 +7,7 @@ import theano.tensor as T
 from ActivationLayer import ActivationLayer
 from Conv2DLayer import Conv2DLayer
 from HiddenLayer import HiddenLayer
+from Param import Param
 
 from theano.ifelse import ifelse
 from theano.tensor.shared_randomstreams import RandomStreams
@@ -71,7 +72,7 @@ class ConvLadderNetwork(object):
         concat = lambda tup, i: list(tup) + [i]
 
         # Parameters needed to learn an optimal denoising function
-        self.A       = [setToOne(np.zeros(concat(i[1:], 10), dtype=theano.config.floatX), [0, 1, 5, 6]) for i in self.n_units[::-1]]
+        self.A       = [Param(setToOne(np.zeros(concat(i[1:], 10), dtype=theano.config.floatX), [0, 1, 6]), True) for i in self.n_units[::-1]]
 
         # Used during the computation of the optimal denoising function
         self.expand  = lambda A, o: A[:,:,:,o].dimshuffle('x', 0, 1, 2)
@@ -86,8 +87,9 @@ class ConvLadderNetwork(object):
         for id, shape in enumerate(self.n_units[1:]):
             gamma_beta_shapes.append([(1 if si in self.mom_axes[id] else s) for si,s in enumerate(shape)])
                     
-        self.gamma = [theano.shared(value=np.ones(s, dtype=theano.config.floatX), borrow=True) for s in gamma_beta_shapes]
-        self.beta  = [theano.shared(value=np.zeros(s, dtype=theano.config.floatX), borrow=True) for s in gamma_beta_shapes]
+        # Parameters of trainable batchnorm layers
+        self.gamma = [Param(theano.shared(value=np.ones(s, dtype=theano.config.floatX), borrow=True), True) for s in gamma_beta_shapes]
+        self.beta  = [Param(theano.shared(value=np.zeros(s, dtype=theano.config.floatX), borrow=True), True) for s in gamma_beta_shapes]
 
         self.params += self.A
         self.params += self.gamma
@@ -99,19 +101,17 @@ class ConvLadderNetwork(object):
            to split between labeled and unlabeled data points."""
         # 123, 127
         # Returns classification predictions and layerwise data
-#        noisy_y, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
-        noisy_y, noisy = self.fprop(input=input, output=output, sigma=0.0)
+        noisy_y, noisy = self.fprop(input=input, output=output, sigma=self.sigma)
+
         # sigma = 0.0 -> no noise. Used to supply denoising targets
-#        self.predictions, clean = self.fprop(input=input, output=output, sigma=0.0)
-        self.predictions, clean = noisy_y, noisy
+        self.predictions, clean = self.fprop(input=input, output=output, sigma=0.0)
 
         # Decoder part of the denoising autoencoder, pass only unlabeled data
         self.inv(self.unlabeled(noisy_y, output), noisy['unlabeled'], clean['unlabeled'])
-#        self.inv(self.unlabeled_y(noisy_y, output), noisy['unlabeled'], clean['unlabeled'])
 
         # Used to calculate the unsupervised cost
-#        self.clean_z = clean['unlabeled']['z_pre'].values()
-#        self.reconstructions.reverse()
+        self.clean_z = clean['unlabeled']['z_pre'].values()
+        self.reconstructions.reverse()
 
         # predict with the clean version, calculate supervised cost with the noisy version
         return noisy_y
@@ -164,7 +164,7 @@ class ConvLadderNetwork(object):
         """
         if (p_index > -1):
             # Trainable bn
-            bn = self.gamma[p_index] * (input + self.beta[p_index])
+            bn = self.gamma[p_index].value * (input + self.beta[p_index].value)
 
         return input
 
@@ -194,16 +194,14 @@ class ConvLadderNetwork(object):
                 # 90-91
                 l_input = self.batchnorm(l_input, axes=self.mom_axes[h_id])
                 u_input = self.batchnorm(u_input, axes=self.mom_axes[h_id], mean=u_mean, std=u_std)
-#                input = self.batchnorm(input, axes=self.mom_axes[h_id])
 
                 # 91
                 input = self.add_noise(self.join(l_input, u_input), sigma)
-#                input = self.add_noise(input, sigma)
                 # 114: TODO: ReLUs don't need beta, gamma
                 input = self.beta_gamma(input, h_id)
 
                 # Re-used during decoding (118-119)
-#                d['labeled']['z_pre'][h_id+1]   = l_input 
+                d['labeled']['z_pre'][h_id+1]   = l_input 
                 d['unlabeled']['z_pre'][h_id+1] = u_input
                 # statistics only for unlabeled examples 
                 d['unlabeled']['mean'][h_id+1] = u_mean
@@ -266,6 +264,8 @@ class ConvLadderNetwork(object):
                 z_est[l_id] = self.skip_connect(u, noisy_z, l_id, conv)
                 u = z_est[l_id]
 
+#                self.tmp = tmp
+
                 # Used to calculate the denoising cost
                 self.reconstructions.append(self.batchnorm(z_est[l_id], axes=axes, mean=mean, std=std))
                 l_id += 1
@@ -276,12 +276,13 @@ class ConvLadderNetwork(object):
             These skip-connections release the pressure for higher layer to represent
             all information necessary for decoding.
         """
-        mu = self.compute_mu(u, self.A[d_index], conv)
-        v  = self.compute_v(u, self.A[d_index], conv)
+        mu = self.compute_mu(u, self.A[d_index].value, conv)
+        v  = self.compute_v(u, self.A[d_index].value, conv)
 
-        z_est = (noisy_z - mu) * v + mu
+#        z_est = (noisy_z - mu) * v + mu
 
-        return z_est
+        return noisy_z
+#        return z_est
     
     def save(self, filename):
         if filename is None: return

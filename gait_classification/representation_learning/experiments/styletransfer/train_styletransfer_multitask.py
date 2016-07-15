@@ -66,8 +66,7 @@ network = MultiTaskNetwork(
     ActivationLayer(rng, f='elu'),
     Pool1DLayer(rng, (2,), (batchsize, 256, 60)),
 
-    MultiTaskLayer(classification_network, 
-                   reconstruction_network)
+    MultiTaskLayer(classification_network, reconstruction_network)
 )
 
 # Load the pre-trained conv-layers
@@ -76,12 +75,12 @@ network = MultiTaskNetwork(
 #              '../models/conv_ae/layer_2.npz', None, None, 
 #              None, None, None])
 
-trainer = BinaryTaskTrainer(rng=rng, batchsize=batchsize, epochs=100, alpha=0.0001, task1_weight=1.0, costs=['cross_entropy', 'mse'])
+trainer = BinaryTaskTrainer(rng=rng, batchsize=batchsize, epochs=100, alpha=0.0001, costs=['cross_entropy', 'mse'])
 
 trainer.train(network=network, train_input=train_set_x, train_outputs=[train_set_y, train_set_x], 
-              valid_input=valid_set_x, valid_output=valid_set_y, 
-              filename=['../models/styletransfer/hybrid_v_1/layer_0.npz', None, None,        # 1. Conv, Activation, Pooling
-                        '../models/styletransfer/hybrid_v_1/layer_1.npz', None, None,        # 2. Conv, Activation, Pooling
-                        '../models/styletransfer/hybrid_v_1/layer_2.npz', None, None])       # 3. Conv, Activation, Pooling
+              valid_input=valid_set_x, valid_output=valid_set_y, filename=None)
+#              filename=['../models/styletransfer/hybrid_v_1/layer_0.npz', None, None,        # 1. Conv, Activation, Pooling
+#                        '../models/styletransfer/hybrid_v_1/layer_1.npz', None, None,        # 2. Conv, Activation, Pooling
+#                        '../models/styletransfer/hybrid_v_1/layer_2.npz', None, None])       # 3. Conv, Activation, Pooling
 
 trainer.eval(network=network, eval_input=test_set_x, eval_output=test_set_y, filename=None)
