@@ -22,7 +22,7 @@ def data_util(preds,x, num_frame_pred):
 
 def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10,\
         orig_file='Joe/edin_shuffled.npz', pre_lstm='Joe/pre_proc_lstm.npz', extracted='Joe/sequential_final_frame.npz' ,test_start=310):
-
+    
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/'+orig_file)['clips']
     X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
@@ -31,9 +31,10 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
     # Set if using test set.
-    test=True
+    test=False
     data = np.load('../../../data/' + extracted)
     print(data.keys())
+
     if(test):
         data_x = data['test_x']
         data_y = data['test_y']
@@ -50,14 +51,14 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
     # Original data set not used in prediction, a check to see what data should look like.
     if num_frame_pred>1:
-        orig = np.concatenate([data_x[frame:frame+1,:(-num_frame_pred)+1],data_y[frame:frame+1][:,-num_frame_pred:]], axis=1)
+        orig = np.concatenate([data_x[frame:frames,:(-num_frame_pred)+1],data_y[frame:frames][:,-num_frame_pred:]], axis=1)
     else:
-       orig = np.concatenate([data_x[frame:frame+1],data_y[frame:frame+1, -1:]], axis=1)
+       orig = np.concatenate([data_x[frame:frames],data_y[frame:frames, -1:]], axis=1)
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
     # To keep shape [1,29,256] allows for easy looping
-    data_loop = data_x[frame:frame+1]
+    data_loop = data_x[frame:frames]
     old_preds = data_loop[:,-1:]
     for i in range(num_pred_iter):
         preds = model.predict(data_loop) # SHAPE - [1,29,256].

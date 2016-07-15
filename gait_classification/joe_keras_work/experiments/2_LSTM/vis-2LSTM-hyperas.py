@@ -1,7 +1,3 @@
-'''
-    Train on t+1 vector for every t, only trying to predict the final frame, given 29 as seed.
-'''
-
 from __future__ import print_function
 
 from keras.models import Sequential
@@ -14,24 +10,10 @@ import numpy as np
 import random
 import sys
 import theano
-sys.path.append('../../../representation_learning/')
-
-from nn.Network import InverseNetwork, AutoEncodingNetwork
-from nn.AnimationPlot import animation_plot
+sys.path.append('../../utils/')
+from visualise import visualise
 sys.path.append('../../')
-from custom import AttentionLSTM
-
-def data_util(preds,x):
-    preds = np.expand_dims(preds, 1)
-    d1 = preds[0] # - take the first
-    d2 = np.concatenate((x[0], d1)) #First X
-    return d2
-
-data = np.load('../../../data/Joe/sequential_final_frame.npz')
-train_x = np.concatenate((data['train_x'], data['test_x']))
-train_y = np.concatenate((data['train_x'], data['test_y']))
-test_x = data['test_x']
-test_y = data['test_y']
+import custom.AttentionLSTM
 
 # build the model: 2 stacked LSTM
 print('Build model...')
@@ -51,10 +33,4 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
-print('Training model...')
-hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=150)
-    
-print(hist.history)
-score = model.evaluate(test_x,test_y)
-print(score)
-model.save_weights('../../weights/2LSTM-hyperas.hd5')
+visualise(model, '2LSTM-hyperas.hd5', frame=26, num_frame_pred=25,  num_pred_iter=1, anim_frame_start=0, test_start=0)

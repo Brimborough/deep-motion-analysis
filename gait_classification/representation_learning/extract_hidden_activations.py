@@ -21,6 +21,8 @@ X = X[:,:-4]
 preprocess = np.load('../data/Joe/preprocess.npz')
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
+control = X[:,-3:]
+np.savez_compressed('edin_shuffled_control.npz', clips=control)
 
 from network import network
 network.load([
