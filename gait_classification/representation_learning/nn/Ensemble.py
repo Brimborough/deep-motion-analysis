@@ -38,7 +38,10 @@ class Ensemble(object):
         for bii, bi in enumerate(pred_batchinds):
             network_output.append(pred_func(bi))
 
-        return np.array(network_output).squeeze().reshape(10000, 10)
+        network_output = np.array(network_output).squeeze()
+
+        return network_output.reshape(np.prod(network_output.shape[:-1]), 
+                                      network_output.shape[-1])
 
     def eval(self, eval_input, eval_output):
 
