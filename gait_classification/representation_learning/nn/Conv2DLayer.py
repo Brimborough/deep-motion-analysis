@@ -51,6 +51,8 @@ class Conv2DLayer(object):
         
         output = output - self.b.dimshuffle('x', 0, 'x', 'x')
         
+        print output.shape
+
         s, f = self.output_shape, self.filter_shape
         hzeros = T.basic.zeros((s[0], s[1], (f[2]-1)//2, s[3]), dtype=theano.config.floatX)
         vzeros = T.basic.zeros((s[0], s[1], s[2] + (f[2]-1), (f[3]-1)//2), dtype=theano.config.floatX)

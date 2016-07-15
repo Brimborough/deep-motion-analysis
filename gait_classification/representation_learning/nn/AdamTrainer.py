@@ -23,7 +23,7 @@ pred       = lambda Y: T.argmax(Y, axis=1)
 
 class AdamTrainer(object):
     
-    def __init__(self, rng, batchsize, epochs=100, alpha=0.001, beta1=0.9, beta2=0.999, 
+    def __init__(self, rng, batchsize, epochs=100, alpha=0.000001, beta1=0.9, beta2=0.999, 
                  eps=1e-08, l1_weight=0.0, l2_weight=0.0, cost='mse'):
         self.alpha = alpha
         self.beta1 = beta1
@@ -72,6 +72,10 @@ class AdamTrainer(object):
         y_pred = self.y_pred(network, input)
         cost = self.cost(network, y_pred, output) + self.l1_weight * self.l1_regularization(network) + \
                                                     self.l2_weight * self.l2_regularization(network)
+
+        #overall_cost, repr_cost = self.cost(network, y_pred, output)
+        #cost = overall_cost + self.l1_weight * self.l1_regularization(network) + \
+        #                                            self.l2_weight * self.l2_regularization(network)
         error = None
 
         if (self.error):
@@ -147,7 +151,8 @@ class AdamTrainer(object):
         for bi in xrange(1, len(rep_batchinds)):
             rep_tensor.append(rep_func(bi)[0])
 
-        rep_tensor = np.squeeze(np.array(rep_tensor))
+        #rep_tensor = np.array(rep_tensor)
+        rep_tensor = np.squeeze(np.array(rep_tensor), axis=(1,))
 
         return rep_tensor
 
@@ -240,7 +245,7 @@ class AdamTrainer(object):
             tr_errors.append(tr_error)
 
             if (logging and (bii % (int(len(func_batchinds) / 1000) + 1) == 0)):
-                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f' % (epoch, 100 * float(bii)/len(func_batchinds), np.mean(tr_errors)))
+                sys.stdout.write('\r[Epoch %i]  %0.1f%% mean training error: %.5f, cost: %.5f' % (epoch, 100 * float(bii)/len(func_batchinds), np.mean(tr_errors), tr_cost))
                 sys.stdout.flush()
 
         error_mean = np.mean(tr_errors)
@@ -293,7 +298,7 @@ class AdamTrainer(object):
             curr_train_error, train_cost = self.run_func(train_func, train_input, logging=True, epoch=epoch)
             diff_train_error, last_train_error = curr_train_error-last_train_error, curr_train_error
 
-            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f' % \
+            output_str = '\r[Epoch %i] 100.0%% mean training error: %.5f training diff: %.5f ' % \
                          (epoch, curr_train_error, diff_train_error)
 
             valid_error, valid_cost = self.run_func(valid_func, valid_input, logging=False)

@@ -34,7 +34,10 @@ class Network(object):
     
     def save(self, filename):
         if filename is None: return
+
         for fname, layer in zip(filename, self.layers):
+            print fname
+            print layer
             layer.save(fname)
         
     def load(self, filename):
@@ -131,6 +134,20 @@ class AutoEncodingNetwork(object):
         
     def __call__(self, input):
         return self.network.inv(self.network(input))
+
+    def get_hidden(self, input, depth):
+        """ Branches indicates the position of the representation in the
+            computational graph for which the hidden representation shall be returned.
+
+            I.e. branches = [0,1] indicates that the method should return
+            the representation that is aquired by following the left branch
+            at the leftmost and the branch right to the leftmost branchb at the 
+            subsequent multi-task layer.
+
+            Returns a single output
+        """
+
+        return self.__call__(input)
     
     def inv(self, output):
         return self.network(self.network.inv(output))
