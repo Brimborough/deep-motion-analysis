@@ -303,31 +303,28 @@ def load_styletransfer(rng, split, labels='combined'):
     #(Motion, Styles)
     classes = data['classes']
 
-    # get mean and std
-    preprocessed = np.load('../data/styletransfer/styletransfer_preprocessed.npz')
+    Xmean = X.mean(axis=2).mean(axis=0)[np.newaxis,:,np.newaxis]
+    Xmean[:,-3:] = 0.0
 
-    Xmean = preprocessed['Xmean']
-    Xmean = Xmean.reshape(1,len(Xmean),1)
-    Xstd  = preprocessed['Xstd']
-    Xstd = Xstd.reshape(1,len(Xstd),1)
-
-    # TODO: Is this necessary?
-#    Xstd[np.where(Xstd == 0)] = 1
+    Xstd = np.array([[[X.std()]]]).repeat(X.shape[1], axis=1)
+    Xstd[:,-3:-1] = X[:,-3:-1].std()
+    Xstd[:,-1:  ] = X[:,-1:  ].std()
 
     X = (X - Xmean) / (Xstd + 1e-10)
 
     # Motion labels in one-hot vector format
-    Y = np.load('../data/styletransfer/styletransfer_one_hot.npz')[labels]
+    #Y = np.load('../data/styletransfer/styletransfer_one_hot.npz')[labels]
 
     # Randomise data
     I = np.arange(len(X))
     rng.shuffle(I)
 
     X = X[I].astype(theano.config.floatX)
-    Y = Y[I].astype(theano.config.floatX)
+    #Y = Y[I].astype(theano.config.floatX)
 
-    datasets = fair_split(rng, X, Y, split)
-    return datasets
+    #datasets = fair_split(rng, X, Y, split)
+    #return datasets
+    return [(X,), (), ()]
 
 def load_cmu(rng, filename='../data/cmu/data_cmu.npz'):
 
@@ -347,19 +344,22 @@ def load_cmu(rng, filename='../data/cmu/data_cmu.npz'):
     Xstd[:,-3:-1] = X[:,-3:-1].std()
     Xstd[:,-1:  ] = X[:,-1:  ].std()
 
-    Xstd[np.where(Xstd == 0)] = 1
+    #Xstd[np.where(Xstd == 0)] = 1
 
     X = (X - Xmean) / (Xstd + 1e-10)
+    #X = X* (Xstd + 1e-10) + Xmean
 
     # Randomise data
-    I = np.arange(len(X))
-    rng.shuffle(I); 
-    X = X[I]
+    #I = np.arange(len(X))
+    #rng.shuffle(I); 
+    #X = X[I]
+    #Xstd = 1.
+    #Xmean = 0.
 
-    return [(X,)]
+    return [(X,)], Xstd, Xmean
 
 def load_cmu_small(rng):
-    return load_cmu(rng=rng, filename='../data/data_cmu_small.npz')
+    return load_cmu(rng=rng, filename='../data/cmu/data_cmu_small.npz')
 
 def load_mnist(rng):
     ''' Loads the MNIST dataset
