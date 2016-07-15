@@ -213,6 +213,42 @@ class AdamTrainer(object):
         sys.stdout.write(('Training took %.2fm\n' % ((end_time - start_time) / 60.)))
         sys.stdout.flush()
 
+    def test(self, network, test_input, test_output, filename=None):
+
+        input = test_input.type()
+        output = test_output.type()
+        # Match batch index
+        index = T.lscalar()
+        
+        self.params = network.params
+        self.m0params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
+        self.m1params = [theano.shared(np.zeros(p.shape.eval(), dtype=theano.config.floatX), borrow=True) for p in self.params]
+        self.t = theano.shared(np.array([1], dtype=theano.config.floatX))
+
+        # Full batch evaluation
+        # test_batchsize = test_input.get_value().shape[0]
+        test_batchsize = self.batchsize
+
+        test_func = theano.function(inputs=[index],
+                                    outputs=[cost, error],
+                                    givens={input:test_input[index*test_batchsize:(index+1)*test_batchsize],
+                                            output:test_output[index*test_batchsize:(index+1)*test_batchsize],},
+                                    allow_input_downcast=True)
+
+        test_batchinds = np.arange(test_input.shape.eval()[0] // self.batchsize)
+
+        ts_errors = []
+        for bii, bi in enumerate(test_batchinds):
+            ts_cost, ts_error = test_func(bi)
+            ts_errors.append(ts_error)
+
+        test_error = np.mean(ts_errors)
+
+        sys.stdout.write(('Optimization complete. Best validation score of %f %% '
+                          'obtained at epoch %i, with test performance %f %%\n') %
+                         (best_valid_error * 100., best_epoch + 1, test_error * 100.))
+        sys.stdout.flush()
+
 class LadderAdamTrainer(AdamTrainer):
     """
     AdamTrainer for ladder networks (see [1]). This seperation into two classes is necessary due
