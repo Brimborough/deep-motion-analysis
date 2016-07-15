@@ -66,4 +66,4 @@ trainer.train(network=network, train_input=train_set_x, train_output=train_set_y
 #                       filename=None, logging=False)
 
 # Test set performance
-trainer.eval(network=network, eval_input=test_set_x, eval_output=test_set_y, filename=None, logging=True)
+trainer.eval(network=network, eval_input=test_set_x, eval_output=test_set_y, filename=None)

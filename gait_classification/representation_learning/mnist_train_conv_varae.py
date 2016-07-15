@@ -15,11 +15,12 @@ from tools.utils import load_cmu, load_cmu_small
 
 rng = np.random.RandomState(23455)
 
-BATCH_SIZE = 1
+BATCH_SIZE = 10
 
 network = Network(
+    
     Network(
-        DropoutLayer(rng, 0.25),
+    	DropoutLayer(rng, 0.25),
         Conv1DLayer(rng, (64, 66, 25), (BATCH_SIZE, 66, 240)),
         Pool1DLayer(rng, (2,), (BATCH_SIZE, 64, 240)),
         ActivationLayer(rng),
@@ -47,19 +48,13 @@ network = Network(
 )
 
 shared = lambda d: theano.shared(d, borrow=True)
-dataset, std, mean = load_cmu_small(rng)
+dataset, std, mean = load_cmu(rng)
 E = shared(dataset[0][0])
-
-network.load([[None, '../models/cmu/conv_varae/v_4/layer_0.npz', None, None, 
-                None, '../models/cmu/conv_varae/v_4/layer_1.npz', None, None,],
-                [None,],
-                [None, None, '../models/cmu/conv_varae/v_4/layer_2.npz', None,
-                None, None, '../models/cmu/conv_varae/v_4/layer_3.npz',],])
 
 def cost(networks, X, Y):
     network_u, network_v, network_d = networks.layers
     
-    vari_amount = 1.0
+    vari_amount = 0.8
     repr_amount = 1.0
     
     H = network_u(X)
@@ -70,16 +65,15 @@ def cost(networks, X, Y):
     
     return repr_amount * repr_cost + vari_amount * vari_cost
 
-trainer = AdamTrainer(rng, batchsize=BATCH_SIZE, epochs=100, alpha=0.000001, cost=cost)
+trainer = AdamTrainer(rng, batchsize=BATCH_SIZE, epochs=1, alpha=0.000001, cost=cost)
+trainer.train(network, E, E, filename=[[None, '../models/cmu/conv_varae/v_4/layer_0.npz', None, None, 
+                            			None, '../models/cmu/conv_varae/v_4/layer_1.npz', None, None,],
+                            			[None,],
+                              			[None, None, '../models/cmu/conv_varae/v_4/layer_2.npz', None,
+                              			None, None, '../models/cmu/conv_varae/v_4/layer_3.npz',],])
+
 result = trainer.get_representation(network, E, 2)  * (std + 1e-10) + mean
 
-print result.shape
-
-dataset_ = dataset[0][0] * (std + 1e-10) + mean
-
-new1 = result[250:251]
-new2 = result[269:270]
-new3 = result[0:1]
-
-animation_plot([new1, new2, new3], interval=15.15)
-
+sample = sample[0:100].reshape((10,10,28,28)).transpose(1,2,0,3).reshape((10*28, 10*28))
+plt.imshow(sample, cmap = plt.get_cmap('gray'), vmin=0, vmax=1)
+plt.savefig('vae_samples/sampleImages_new')
