@@ -6,8 +6,7 @@ from __future__ import print_function
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
-from keras.layers import LSTM
-from keras.layers.normalization import BatchNormalization
+from keras.layers import LSTM, GRU
 from keras.optimizers import Nadam
 import keras
 from hyperopt import Trials, STATUS_OK, tpe
@@ -47,17 +46,20 @@ def model(train_x, train_y, test_x, test_y):
     model = Sequential()
     model.add(TimeDistributed(Dense({{choice([128,256])}}), input_shape=(29,256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-    model.add(LSTM({{choice([128,256,512])}}, return_sequences=True,consume_less='gpu', \
+    model.add(GRU({{choice([128,256,512])}}, return_sequences=True,consume_less='gpu', \
                     init='glorot_normal'))
     model.add(Dropout({{uniform(0, 1)}}))
-    model.add(LSTM({{choice([128,256,512])}}, return_sequences=True, consume_less='gpu', \
+    model.add(GRU({{choice([128,256,512])}}, return_sequences=True, consume_less='gpu', \
+                   init='glorot_normal'))
+    model.add(Dropout({{uniform(0, 1)}}))
+    model.add(GRU({{choice([128,256,512])}}, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
     model.add(Dropout({{uniform(0, 1)}}))
     model.add(TimeDistributed(Dense(256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam')
 
-    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y), callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')])
+    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y))
     score = model.evaluate(test_x, test_y, verbose=0)
 
     print('Test Score:', score)
@@ -68,7 +70,7 @@ if __name__ == '__main__':
     best_run = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=100,
+                                          max_evals=150,
                                           trials=Trials())
     X_train, Y_train, X_test, Y_test = data()
     print("Best Run:")
@@ -76,5 +78,4 @@ if __name__ == '__main__':
     text_file = open("2LSTM-D.txt", "w")
     text_file.write("Best Run: %s" % best_run)
     text_file.close()
-
-#({'Dropout_1': 0.06857459142743914, 'LSTM_1': 2, 'Dropout': 0.014023155812443386, 'Dense': 1, 'LSTM': 2}, None)
+#({'Dropout_1': 0.0016578035533714422, 'GRU_1': 2, 'Dropout': 0.24530841363315561, 'GRU': 1, 'Dense': 0}, None)

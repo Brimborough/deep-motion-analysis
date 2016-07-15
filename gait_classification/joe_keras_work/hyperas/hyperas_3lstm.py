@@ -53,11 +53,14 @@ def model(train_x, train_y, test_x, test_y):
     model.add(LSTM({{choice([128,256,512])}}, return_sequences=True, consume_less='gpu', \
                    init='glorot_normal'))
     model.add(Dropout({{uniform(0, 1)}}))
+    model.add(LSTM({{choice([128,256,512])}}, return_sequences=True, consume_less='gpu', \
+                   init='glorot_normal'))
+    model.add(Dropout({{uniform(0, 1)}}))
     model.add(TimeDistributed(Dense(256)))
     model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
     model.compile(loss='mean_squared_error', optimizer='nadam')
 
-    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y), callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')])
+    hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y))
     score = model.evaluate(test_x, test_y, verbose=0)
 
     print('Test Score:', score)
@@ -68,7 +71,7 @@ if __name__ == '__main__':
     best_run = optim.minimize(model=model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=100,
+                                          max_evals=150,
                                           trials=Trials())
     X_train, Y_train, X_test, Y_test = data()
     print("Best Run:")
