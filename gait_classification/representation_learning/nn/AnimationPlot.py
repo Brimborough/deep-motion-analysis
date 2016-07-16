@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
@@ -78,12 +79,13 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
 
     if filename != None:
         #ani.save(filename, fps=30, bitrate=13934)
+        
         data = {}
         for i, a, f in zip(range(len(animations)), animations, footsteps):
             data['anim_%i' % i] = a
             data['anim_%i_footsteps' % i] = f
         np.savez_compressed(filename.replace('.mp4','.npz'), **data)
-    
+        
     try:
         plt.show()
     except AttributeError as e:
