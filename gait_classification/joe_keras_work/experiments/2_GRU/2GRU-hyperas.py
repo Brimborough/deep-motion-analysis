@@ -34,7 +34,7 @@ model.add(GRU(512, return_sequences=True,consume_less='gpu', \
 model.add(Dropout(0.02))
 model.add(GRU(512, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(0.2))
+model.add(Dropout(0.2))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')

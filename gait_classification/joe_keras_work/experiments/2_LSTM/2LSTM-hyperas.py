@@ -18,7 +18,8 @@ sys.path.append('../../../representation_learning/')
 
 from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
-
+sys.path.append('../../')
+from custom import AttentionLSTM
 
 def data_util(preds,x):
     preds = np.expand_dims(preds, 1)
@@ -27,22 +28,22 @@ def data_util(preds,x):
     return d2
 
 data = np.load('../../../data/Joe/sequential_final_frame.npz')
-train_x = data['train_x']
-train_y = data['train_y']
+train_x = np.concatenate((data['train_x'], data['test_x']))
+train_y = np.concatenate((data['train_x'], data['test_y']))
 test_x = data['test_x']
 test_y = data['test_y']
 
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(TimeDistributed(Dense(256), input_shape=(29,256)))
+model.add(TimeDistributed(Dense(128), input_shape=(29,256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
-model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
+model.add(AttentionLSTM(256, return_sequences=True, consume_less='gpu', \
                 init='glorot_normal'))
-model.add(Dropout(0.014))
-model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
+#model.add(Dropout(0.014))
+model.add(AttentionLSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(Dropout(0.068))
+#model.add(Dropout(0.068))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
@@ -51,8 +52,7 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
 print('Training model...')
-hist = model.fit(train_x, train_y, batch_size=10, nb_epoch=50, validation_data=(test_x,test_y),\
- callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')])
+hist = model.fit(train_x, train_y, batch_size=20, nb_epoch=150)
     
 print(hist.history)
 score = model.evaluate(test_x,test_y)
