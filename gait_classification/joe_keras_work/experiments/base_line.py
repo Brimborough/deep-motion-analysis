@@ -46,6 +46,12 @@ model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 
 model.compile(loss='mean_squared_error', optimizer='nadam')

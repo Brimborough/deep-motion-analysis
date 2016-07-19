@@ -41,7 +41,7 @@ print(train_n.shape)
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(TimeDistributed(Dense(128), input_shape=(29, 259)))
+model.add(TimeDistributed(Dense(256), input_shape=(29, 259)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
@@ -56,11 +56,11 @@ model.fit(train_n, train_m, batch_size=10, nb_epoch=200, validation_data=(test_n
 
 score = model.evaluate(test_n,test_m)
 print(score)
-model.save_weights('../../weights/1LSTM-128d-first.hd5', overwrite=True)
+model.save_weights('../../weights/1LSTM-256-first.hd5', overwrite=True)
 
 train_control = np.zeros((310,30,3))
 
-for i in range(30):
+for i in range(1,30):
     train_control[:,i] = np.mean(control[:310,8*i:(i+1)*8], axis=1)
     
 train_n = np.concatenate((train_x, train_control[:,:29]), axis=2)
@@ -75,7 +75,7 @@ test_m = np.concatenate((test_y, test_control[:,1:]), axis=2)
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(TimeDistributed(Dense(128), input_shape=(29, 259)))
+model.add(TimeDistributed(Dense(256), input_shape=(29, 259)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
@@ -90,5 +90,5 @@ model.fit(train_n, train_m, batch_size=10, nb_epoch=200, validation_data=(test_n
 
 score = model.evaluate(test_n,test_m)
 print(score)
-model.save_weights('../../weights/1LSTM-128d-mean.hd5', overwrite=True)
+model.save_weights('../../weights/1LSTM-256-mean.hd5', overwrite=True)
 

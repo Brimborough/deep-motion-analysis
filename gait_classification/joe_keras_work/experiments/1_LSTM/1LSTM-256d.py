@@ -27,14 +27,6 @@ train_y = data['train_y']
 test_x = data['test_x']
 test_y = data['test_y']
 
-#Load the preprocessed version, saving on computation
-X = np.load('../../../data/Joe/data_edin_locomotion.npz')['clips']
-X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
-X = X[:,:-4]
-preprocess = np.load('../../../data/Joe/preprocess.npz')
-X = (X - preprocess['Xmean']) / preprocess['Xstd']
-
-
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
@@ -49,9 +41,8 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 print('Training model...')
-earlyStopping = keras.callbacks.EarlyStopping(patience=20)
-model.fit(train_x, train_y, batch_size=10, nb_epoch=100, callbacks=[earlyStopping], validation_data=(test_x,test_y))
+model.fit(train_x, train_y, batch_size=10, nb_epoch=200, validation_data=(test_x,test_y))
 
 score = model.evaluate(test_x,test_y)
 print(score)
-model.save_weights('../../weights/1LSTM-256d.hd5')
+model.save_weights('../../weights/1LSTM-256d.hd5', overwrite=True)

@@ -26,11 +26,17 @@ model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 frame = 99
-num_frame_pred = 1
-num_pred_iter = 5
+num_frame_pred = 20
+num_pred_iter = 1
 
 X = np.load('../../data/Joe/edin_shuffled.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
@@ -68,11 +74,41 @@ pre_lat = np.load('../../data/Joe/pre_proc_lstm.npz')
 # To keep shape [1,29,256] allows for easy looping
 data_loop = data_x[frame:frame+1]
 data_y = data_y[frame:frame+1]
-old_preds = data_y[:,-1:]
 train_t = np.zeros((1,30,512))
+# While loop to replace original
+ # Replace with zeros to ensure we aren't copying.
+data_y[:,(-num_frame_pred)+1:] = 0
+while (30-num_frame_pred) < 30:
+    preds = model.predict(data_loop) # Predict 29
+    if (num_frame_pred != 1):
+        preds = preds[:, -num_frame_pred:(-num_frame_pred)+1].copy()
+        # Checks to ensure we aren't just copying data
+        assert not (np.array_equal(preds, data_x[frame:frame+1, -num_frame_pred:(-num_frame_pred)+1]))
+        assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:(-num_frame_pred)+1]))
+        # Place prediction into the next location, as predictions is 29 length also, and its the next loc
+        data_y[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = preds.copy() 
+        print(data_y.shape)
+        #Rebuild test
+        for i in range(0,28):
+    	    train_t[:,i] = np.concatenate((data_y[:,i], data_y[:,i+1]), axis=1)
+    	data_loop = train_t.copy()[:, 1:] # Remove the 1st frame so we can loop again
+    else:
+        preds = preds[:, -num_frame_pred:].copy()
+        # Checks to ensure we aren't just copying data
+        assert not (np.array_equal(preds, data_x[frame:frame+1, -num_frame_pred:]))
+        assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:]))
+        data_y[:, -num_frame_pred:] = preds.copy()
+        #Rebuild test
+        for i in range(0,28):
+            print(i)
+    	    train_t[:,i] = np.concatenate((data_y[:,i], data_y[:,i+1]), axis=1)
+    	data_loop = train_t.copy()[:, 1:] # Remove the 1st frame so we can loop again
+    num_frame_pred = num_frame_pred-1
+
+
+old_preds = data_y[:,-1:]
 for it in range(num_pred_iter):
     preds = model.predict(data_loop)[:,-1:] # SHAPE - [1,29,256].
-    data_x = np.concatenate((train_x[frame:frame+1,:13],preds[:,12:]), axis =1)
     preds = preds[:,-num_frame_pred:] # Final frame prediction
     """
         Assert:
@@ -86,8 +122,7 @@ for it in range(num_pred_iter):
     #Rebuild test
     for i in range(0,29):
     	train_t[:,i] = np.concatenate((data_y[:,i], data_y[:,i+1]), axis=1)
-    data_x = train_t.copy()
-    data_loop = data_x[:, 1:] # Remove the 1st frame so we can loop again
+    data_loop = train_t.copy()[:, 1:] # Remove the 1st frame so we can loop again
     data_y = data_y[:, 1:]
     old_preds = preds
 
@@ -118,7 +153,7 @@ Xpred = np.array(Xpred) # Just Decoding
 
 
 #Back to original data space
-anim_frame_start = 200
+anim_frame_start = 0
 anim_frame_end = 240
 Xorig = ((Xorig * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
 Xpred = ((Xpred * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]

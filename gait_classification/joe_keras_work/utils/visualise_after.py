@@ -68,9 +68,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     else:
        orig = np.concatenate([data_x[frame:frames],data_y[frame:frames, -1:]], axis=1)
 
-    if(control):
-        data_x = np.concatenate((data_x, data_control[:,:]), axis=2)
-  
     
     # While loop to replace original
     data_loop = data_x[frame:frames]
@@ -78,27 +75,19 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     data_loop[:,(-num_frame_pred)+1:] = 0
     while (30-num_frame_pred) < 30:
         inner_loop_num = 30 - num_frame_pred
-        preds = model.predict(data_loop) # Predict 29
+        preds = model.predict([data_loop, data_control]) # Predict 29
         if (num_frame_pred != 1):
             preds = preds[:, -num_frame_pred:(-num_frame_pred)+1].copy()
             # Checks to ensure we aren't just copying data
             assert not (np.array_equal(preds, data_x[frame:frames, -num_frame_pred:(-num_frame_pred)+1]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:(-num_frame_pred)+1]))
-            # Place prediction into the next location, as predictions is 29 length also, and its the next loc
-            if(control):
-                # Plus one since 29 is the length, not 30
-                data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = np.concatenate((preds.copy(),data_control[frame:frames, (-num_frame_pred):(-num_frame_pred)+1]), axis=2) 
-            else:
-                data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = preds.copy()
+            data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = preds.copy()
         else:
             preds = preds[:, -num_frame_pred:].copy()
             # Checks to ensure we aren't just copying data
             assert not (np.array_equal(preds, data_x[frame:frames, -num_frame_pred:]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:]))
-            if(control):
-                data_loop[:, -num_frame_pred:] = np.concatenate((preds.copy(),data_control[frame:frames, -num_frame_pred:]), axis=2)
-            else:
-                data_loop[:, -num_frame_pred:] = preds.copy()
+            data_loop[:, -num_frame_pred:] = preds.copy()
         num_frame_pred = num_frame_pred-1
         
     # Only predict one from now on.
@@ -108,7 +97,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     #print(rmse(data_loop[:,:,:-3],orig[:,:-1]))
 
     for i in range(num_pred_iter):
-        preds = model.predict(data_loop) # SHAPE - [frames,29,256].
+        preds = model.predict([data_loop, data_control]) # SHAPE - [frames,29,256].
         preds = preds[:,-1:] # Num_frame_predict.
         """
             Assert:
@@ -119,19 +108,11 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         assert (np.array_equal(old_preds, data_loop[:, -1:])), "final frame not equal to the old prediction :S"
         assert not (np.array_equal(preds, data_x[:,-1:])), "Prediction is equal to final data_x"
         # TODO: Make control a LSTM to predict future 
-        if(control):
-            # Plus one since 29 is the length, not 30
-            data_x[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = np.concatenate((preds.copy(),data_control[frame:frames, (-num_frame_pred):(-num_frame_pred)+1]), axis=2) 
-        else:
-            data_x = data_util(preds, data_loop, num_frame_pred).copy()
+        data_x = data_util(preds, data_loop, num_frame_pred).copy()
         data_loop = data_x[:, 1:].copy()# Remove the 1st frame so we can loop again
         old_preds = preds.copy()
     
-    if(control):
-        data_x = data_x[frame:frames,:,:-3]
-        #orig = orig[:,:,:-3]
-        data_x = np.concatenate((data_x, data_y[frame:frames,-1:]), axis=1)
-
+    data_x = np.concatenate((data_x[frame:frames], data_y[frame:frames,-1:]), axis=1)
     #check = data_x[:,4:5]
     data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
     dat = data_x.swapaxes(2, 1) # Swap back axes

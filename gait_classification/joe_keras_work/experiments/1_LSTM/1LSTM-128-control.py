@@ -56,7 +56,7 @@ model.fit(train_n, train_m, batch_size=10, nb_epoch=200, validation_data=(test_n
 
 score = model.evaluate(test_n,test_m)
 print(score)
-model.save_weights('../../weights/1LSTM-128d-first.hd5', overwrite=True)
+model.save_weights('../../weights/1LSTM-128-first.hd5', overwrite=True)
 
 train_control = np.zeros((310,30,3))
 
@@ -90,5 +90,5 @@ model.fit(train_n, train_m, batch_size=10, nb_epoch=200, validation_data=(test_n
 
 score = model.evaluate(test_n,test_m)
 print(score)
-model.save_weights('../../weights/1LSTM-128d-mean.hd5', overwrite=True)
+model.save_weights('../../weights/1LSTM-128-mean.hd5', overwrite=True)
 

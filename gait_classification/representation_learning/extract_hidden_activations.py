@@ -7,22 +7,23 @@ from nn.Pool1DLayer import Pool1DLay
 import os
 
 #Remove old file
-os.remove('../data/Joe/HiddenActivations.npz')
+os.remove('../data/CMUHiddenActivations.npz')
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
 BATCH_SIZE = 1
 
 #Load the preprocessed to save some time
-X = np.load('../data/Joe/data_edin_locomotion.npz')['clips']
+X = np.load('../data/data_cmu.npz')['clips']
 X = np.swapaxes(X, 1, 2).astype(theano.config.floatX)
 X = X[:,:-4]
 
 preprocess = np.load('../data/Joe/preprocess.npz')
 X = (X - preprocess['Xmean']) / preprocess['Xstd']
 
+#Maybe add longer control sequences here
 control = X[:,-3:]
-np.savez_compressed('edin_shuffled_control.npz', clips=control)
+np.savez_compressed('cmu_shuffled_control.npz', clips=control)
 
 from network import network
 network.load([
@@ -37,8 +38,9 @@ for layer in network.layers:
     if isinstance(layer, Pool1DLayer):  layer.depooler = lambda x, **kw: x/2
 
 # Values received from  data
-Xnout = np.empty([321,256,30], dtype=theano.config.floatX)
-Xoout = np.empty([321,256,30], dtype=theano.config.floatX)
+# Locomotion is 321, CMU is 17924
+Xnout = np.empty([17924,256,30], dtype=theano.config.floatX)
+Xoout = np.empty([17924,256,30], dtype=theano.config.floatX)
 
 # Go through inputs in factors of 4481
 for input in range(0,len(X),BATCH_SIZE):
@@ -55,4 +57,4 @@ for input in range(0,len(X),BATCH_SIZE):
     Xoout[input:input+BATCH_SIZE] = np.array(Network(network)(Xorig).eval()).astype(theano.config.floatX)[:]
 
 #Save the noisy activations
-np.savez_compressed('../data/Joe/HiddenActivations', Noisy=Xnout, Orig=Xoout)
+np.savez_compressed('../data/CMUHiddenActivations', Noisy=Xnout, Orig=Xoout)
