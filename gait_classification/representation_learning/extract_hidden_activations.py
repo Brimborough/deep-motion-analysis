@@ -3,11 +3,11 @@ import theano
 
 from nn.Network import Network
 from nn.NoiseLayer import NoiseLayer
-from nn.Pool1DLayer import Pool1DLay
+from nn.Pool1DLayer import Pool1DLayer
 import os
 
 #Remove old file
-os.remove('../data/CMUHiddenActivations.npz')
+#os.remove('../data/CMUHiddenActivations.npz')
 
 rng = np.random.RandomState(23455)
 # Set the batch size - remember to also perform in the network.py
