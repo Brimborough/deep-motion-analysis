@@ -16,6 +16,12 @@ sys.path.append('../../representation_learning/')
 from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
 
+# Calculate the 3D angle
+def angle(a,b):
+    running = np.dot(np.squeeze(a),np.squeeze(b.T)) 
+    running = running / (np.linalg.norm(a)*np.linalg.norm(b))
+    running = np.mean(running)
+    return running
 
 def test_vis(frame, test_frame):
 
@@ -50,7 +56,7 @@ def test_vis(frame, test_frame):
         '../../models/conv_ae/layer_2.npz', None, None,
     ])
 
-
+    frame = frame+310
     # Run find_frame.py to find which original motion frame is being used.
     Xorig = X[frame:frame+1]
 
@@ -65,25 +71,33 @@ def test_vis(frame, test_frame):
     Xtest = np.array(Xtest)
 
     # Last 3 - Velocities so similar root
-    #Xrecn[:, -3:] = Xorig[:, -3:]
-    #Xtest[:, -3:] = Xorig[:, -3:]
+    Xrecn[:, -3:] = Xorig[:, -3:]
+    Xtest[:, -3:] = Xorig[:, -3:]
 
     #Back to original data space
-    Xorig = (Xorig * preprocess['Xstd']) + preprocess['Xmean']
-    Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])[:,:,120:]
-    Xtest = ((Xtest * preprocess['Xstd']) + preprocess['Xmean'])[:,:,:121]
+    Xorig = ((Xorig * preprocess['Xstd']) + preprocess['Xmean'])
+    Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])
+    Xtest = ((Xtest * preprocess['Xstd']) + preprocess['Xmean'])
+
+    print(np.linalg.norm(Xorig - Xtest)/66)
+    print(np.linalg.norm(Xorig - Xrecn)/66)
 
     animation_plot([Xorig, Xrecn, Xtest], interval=15.15, labels=['Root', 'Reconstruction', 'Test'])
 
 test_vis(137,0)
+'''
 print('1')
 test_vis(233,1)
 print('2')
 test_vis(22,2)
 print('3')
 test_vis(275,3)
+print('4')
+test_vis(275,4)
 print('5')
 test_vis(65,5)
+print('6')
+test_vis(275,6)
 print('7')
 test_vis(78,7)
 print('8')
@@ -91,4 +105,4 @@ test_vis(104,8)
 print('9')
 test_vis(83,9)
 print('10')
-test_vis(170,10)
+test_vis(170,10)'''

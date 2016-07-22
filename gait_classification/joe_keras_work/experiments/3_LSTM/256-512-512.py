@@ -44,7 +44,11 @@ model.add(TimeDistributed(Dense(256), input_shape=(29, 259)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(Dropout(0.1))
+model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(Dropout(0.2))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
@@ -56,5 +60,5 @@ model.fit(train_n, train_y, batch_size=10, nb_epoch=200)
 
 score = model.evaluate(test_n,test_y)
 print(score)
-model.save_weights('../../weights/1LSTMC-256d.hd5', overwrite=True)
+model.save_weights('../../weights/3LSTMC-256-2x512.hd5', overwrite=True)
 

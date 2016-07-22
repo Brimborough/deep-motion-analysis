@@ -40,7 +40,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     # Set if using test set.
     test=True
     data = np.load('../../../data/' + extracted)
-    print(data.keys())
 
     control_sig = np.load('../../../data/Joe/edin_shuffled_control.npz')['control'].swapaxes(1,2)
 
@@ -56,6 +55,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         data_control = control_sig[:310,8::8]
         frame_orig = frame
     
+    data_x2 = data['test_x'].copy()
     print(data_control.shape)
     frames = frame+1
     #Load model
@@ -64,16 +64,18 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
     # Original data set not used in prediction, a check to see what data should look like.
     if num_frame_pred>1:
-        orig = np.concatenate([data_x[frame:frames,:(-num_frame_pred)+1],data_y[frame:frames][:,-num_frame_pred:]], axis=1)
+        orig = np.concatenate([data_x[:,:(-num_frame_pred)+1],data_y[:][:,-num_frame_pred:]], axis=1)
     else:
-       orig = np.concatenate([data_x[frame:frames],data_y[frame:frames, -1:]], axis=1)
+       orig = np.concatenate([data_x[:],data_y[:, -1:]], axis=1)
 
     if(control):
         data_x = np.concatenate((data_x, data_control[:,:]), axis=2)
   
     
     # While loop to replace original
-    data_loop = data_x[frame:frames]
+    data_loop = data_x[:].copy()
+    data_loop2 = data_loop[:].copy()
+
     # Replace with zeros to ensure we aren't copying.
     data_loop[:,(-num_frame_pred)+1:] = 0
     while (30-num_frame_pred) < 30:
@@ -82,21 +84,21 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         if (num_frame_pred != 1):
             preds = preds[:, -num_frame_pred:(-num_frame_pred)+1].copy()
             # Checks to ensure we aren't just copying data
-            assert not (np.array_equal(preds, data_x[frame:frames, -num_frame_pred:(-num_frame_pred)+1]))
+            assert not (np.array_equal(preds, data_x[:, -num_frame_pred:(-num_frame_pred)+1]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:(-num_frame_pred)+1]))
             # Place prediction into the next location, as predictions is 29 length also, and its the next loc
             if(control):
                 # Plus one since 29 is the length, not 30
-                data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = np.concatenate((preds.copy(),data_control[frame:frames, (-num_frame_pred):(-num_frame_pred)+1]), axis=2) 
+                data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = np.concatenate((preds.copy(),data_control[:, (-num_frame_pred):(-num_frame_pred)+1]), axis=2) 
             else:
                 data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = preds.copy()
         else:
             preds = preds[:, -num_frame_pred:].copy()
             # Checks to ensure we aren't just copying data
-            assert not (np.array_equal(preds, data_x[frame:frames, -num_frame_pred:]))
+            assert not (np.array_equal(preds, data_x[:, -num_frame_pred:]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:]))
             if(control):
-                data_loop[:, -num_frame_pred:] = np.concatenate((preds.copy(),data_control[frame:frames, -num_frame_pred:]), axis=2)
+                data_loop[:, -num_frame_pred:] = np.concatenate((preds.copy(),data_control[:, -num_frame_pred:]), axis=2)
             else:
                 data_loop[:, -num_frame_pred:] = preds.copy()
         num_frame_pred = num_frame_pred-1
@@ -127,10 +129,18 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         data_loop = data_x[:, 1:].copy()# Remove the 1st frame so we can loop again
         old_preds = preds.copy()
     
+    #Final assertion things aren't the same before copying
+    assert not (np.array_equal(data_loop, data_loop2))
+
+    if(num_pred_iter == 0): # 0 for ground truth predictions
+        data_x = data_loop[:,:,:-3].copy() # Copy everything but the final 3 control signals
+    else:
+        data_x = data_x[:,:,:-3].copy()
+
+    assert not (np.array_equal(data_x, data_x2))
     if(control):
-        data_x = data_x[frame:frames,:,:-3]
         #orig = orig[:,:,:-3]
-        data_x = np.concatenate((data_x, data_y[frame:frames,-1:]), axis=1)
+        data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
 
     #check = data_x[:,4:5]
     data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
@@ -138,7 +148,14 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
-    #print(rmse(dat,orig))
+    print('RMSE: '+str(rmse(dat,orig)))
+
+    if(frame==11):
+        dat = dat[frame:]
+        orig = orig[frame:]
+    else:
+        dat = dat[frame:frames] #Only visualise the frame we want
+        orig = orig[frame:frames]
 
     from network import network
     network.load([
@@ -151,8 +168,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
     # Run find_frame.py to find which original motion frame is being used.
     Xorig = X[frame_orig:frame_orig+1]
-    print(orig.shape)
-    print(dat.shape)
+
     # Transform dat back to original latent space
     shared = theano.shared(orig).astype(theano.config.floatX)
 
