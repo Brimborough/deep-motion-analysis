@@ -63,7 +63,7 @@ sgd = SGD(momentum = 0.99, clipnorm=25, lr = 1e-3)
 model.compile(loss=euclid_loss, optimizer=sgd)
 
 print('Training model...')
-model.fit(train_x, train_y, batch_size=50, nb_epoch=10)
+model.fit(train_x, train_y, batch_size=25, nb_epoch=100)
 
 score = model.evaluate(test_x,test_y)
 print(score)

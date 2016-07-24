@@ -800,8 +800,8 @@ class Model(Container):
 
         #For malik
         noise = 0
-        noise_epochs = [250,0.5e3,1e3,1.3e3,2e3,2.5e3,3.3e3]
-        noise_list = [0.01,0.05,0.1,0.2,0.3,0.5,0.7]
+        noise_epochs = [250,0.5e3,1e3,1.3e3,2e3,2.5e3]#,3.3e3]
+        noise_list = [0.01,0.05,0.1,0.2,0.3,0.5]#,0.7]
         
         for epoch in range(nb_epoch):
             callbacks.on_epoch_begin(epoch)
