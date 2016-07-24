@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import keras.backend as K
+import backend as K
 import numpy as np
 from keras.utils.generic_utils import get_from_module
 from six.moves import zip
