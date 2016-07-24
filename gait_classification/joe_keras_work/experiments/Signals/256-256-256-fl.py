@@ -30,15 +30,15 @@ test_y = data['test_y']
 control = np.load('../../../data/Joe/edin_shuffled_control.npz')['control']
 control = control.swapaxes(1,2)
 
-train_control = np.zeros((310,29,24))
-for i in xrange(8,16):
-	train_control[:,:,(i-8)*3:((i-8)+1)*3] = np.expand_dims(control[:310,i::8],0)
+train_control = np.zeros((310,29,6))
+for num,i in enumerate([8,15]):
+	train_control[:,:,num*3:(num+1)*3] = np.expand_dims(control[:310,i::8],0)
 
 train_n = np.concatenate((train_x, train_control[:,:29]), axis=2)
 
-test_control = np.zeros((11,29,24))
-for i in xrange(8,16):
-	test_control[:,:,(i-8)*3:((i-8)+1)*3] = np.expand_dims(control[310:,i::8],0)
+test_control = np.zeros((11,29,6))
+for num,i in enumerate([8,15]):
+	test_control[:,:,num*3:(num+1)*3]= np.expand_dims(control[310:,i::8],0)
 
 test_n = np.concatenate((test_x, test_control[:,:29]), axis=2)
 
@@ -46,7 +46,7 @@ test_n = np.concatenate((test_x, test_control[:,:29]), axis=2)
 print('Build model...')
 model = Sequential()
 #Potentially put LSTM here also, going over entire sequence controls....
-model.add(TimeDistributed(Dense(256), input_shape=(29, 280)))
+model.add(TimeDistributed(Dense(256), input_shape=(29, 262)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
@@ -54,7 +54,7 @@ model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(Dropout(0.25))
+model.add(Dropout(0.2))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
@@ -66,5 +66,5 @@ model.fit(train_n, train_y, batch_size=10, nb_epoch=250)
 
 score = model.evaluate(test_n,test_y)
 print(score)
-model.save_weights('../../weights/256-256-256-allv2.hd5', overwrite=True)
+model.save_weights('../../weights/256-256-256-fl.hd5', overwrite=True)
 

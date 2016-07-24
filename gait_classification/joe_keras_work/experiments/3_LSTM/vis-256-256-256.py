@@ -33,12 +33,6 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
-data = np.load('../../../data/Joe/sequential_final_frame.npz')
-control_sig = np.load('../../../data/Joe/edin_shuffled_control.npz')['control'].swapaxes(1,2)
-data_x = np.concatenate((data['test_x'] , control_sig[310:,8::8]), axis=2)
-data_y = data['test_y']
-print('RMSE: ' + str(model.evaluate(data_x, data_y)))
-
 num_frame_pred = 28
 for frame in [1,2,5,8,10]:
 	visualise(model, '3LSTMC-3x256.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\

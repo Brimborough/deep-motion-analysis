@@ -51,12 +51,20 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         for i in xrange(8,16):
             test_control[:,:,(i-8)*3:((i-8)+1)*3] = np.expand_dims(control_sig[310:,i::8],0)
     elif(control_type is 'Alt'):
-        train_control = np.zeros((310,29,9))
+        train_control = np.zeros((310,29,12))
         for num,i in enumerate([8,12,15]):
             train_control[:,:,num*3:(num+1)*3] = np.expand_dims(control_sig[:310,i::8],0)
 
-        test_control = np.zeros((11,29,9))
+        test_control = np.zeros((11,29,12))
         for num,i in enumerate([8,12,15]):
+            test_control[:,:,num*3:(num+1)*3]= np.expand_dims(control_sig[310:,i::8],0)
+    elif(control_type is 'fl'):
+        train_control = np.zeros((310,29,6))
+        for num,i in enumerate([8,15]):
+            train_control[:,:,num*3:(num+1)*3] = np.expand_dims(control_sig[:310,i::8],0)
+
+        test_control = np.zeros((11,29,6))
+        for num,i in enumerate([8,15]):
             test_control[:,:,num*3:(num+1)*3]= np.expand_dims(control_sig[310:,i::8],0)
     else:
         train_control = np.zeros((310,29,9))
