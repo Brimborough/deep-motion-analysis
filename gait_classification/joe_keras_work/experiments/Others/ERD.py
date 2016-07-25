@@ -49,7 +49,7 @@ l1 = LSTM(1000, return_sequences=True, consume_less='gpu', \
 
 input_lstm2 = merge([i, l1], mode='concat', concat_axis=2)
 l2 = LSTM(1000, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal')
+               init='glorot_normal')(input_lstm2)
 
 input_fcout = merge([l2, l1], mode='concat', concat_axis=2)
 
