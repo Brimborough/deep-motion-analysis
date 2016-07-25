@@ -65,7 +65,7 @@ nadam = Nadam(clipnorm=25)
 model.compile(loss='mean_squared_error', optimizer=nadam)
 
 print('Training model...')
-model.fit(train_x, train_y, batch_size=10, nb_epoch=1600)
+model.fit(train_x, train_y, batch_size=10, nb_epoch=1200)
 
 score = model.evaluate(test_x,test_y)
 print(score)

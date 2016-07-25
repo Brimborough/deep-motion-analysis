@@ -800,7 +800,7 @@ class Model(Container):
 
         #For malik
         noise = 0
-        noise_epochs = [200,400,600,800,1000,1200,1400]
+        noise_epochs = [100,200,350,500,650,800,1000]
         noise_list = [0.01,0.05,0.1,0.2,0.3,0.5,0.7]
         
         for epoch in range(nb_epoch):
@@ -815,11 +815,13 @@ class Model(Container):
                 noise = noise_list[noise_epochs.index(epoch)]
             
             if noise > 0 :
-                [T1,N1,D1] = [len(ins[0]), len(ins[1]), len(ins[2])]
+                [T1,N1,D1] = [len(ins[0]), len(ins[0][0]), len(ins[0][0][0])]
                 binomial_prob = rng.binomial(1,0.5,size=(T1,N1,1))
                 noise_to_add = rng.normal(scale=noise,size=[T1,N1,D1])
-                noise_sample = np.repeat(binomial_prob,noise_to_add.shape[2],axis=2) * noise_to_add
-                ins_noise = ins + noise_sample
+                noise_sample = np.repeat(binomial_prob,noise_to_add.shape[2],axis=2) * noise_to_add                
+                # A list of temporal time 
+                ins_noise = [ins[0] + noise_sample, ins[1], ins[2]]
+                assert not np.array_equal(np.array(ins[0]), np.array(ins_noise[0])), "No Noise Added" + str(noise_sample)
             else:
                 ins_noise = ins
             
