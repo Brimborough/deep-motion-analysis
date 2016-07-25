@@ -248,13 +248,17 @@ def load_hdm05_actors(rng, dir = 'hdm05_easy/', n_classes = 26, train=True):
     data_tr = process(np.load(get_filename('tr')))
 
     if train:
-        train_set = join(data_bd, data_mm)
+#        This leads to an unfair split where we're testing on data
+#        that is not in the training set
+#        train_set = join(data_bd, data_mm)
+        train_set = join(data_tr, data_mm)
         valid_set = data_bk
     else:
-        train_set = join(join(data_bd, data_mm), data_bk)
+        train_set = join(join(data_tr, data_mm), data_bk)
         valid_set = []
 
-    test_set = join(data_tr, data_dg)
+#    test_set = join(data_tr, data_dg)
+    test_set = join(data_dg, data_bd)
 
     # Randomise training data
     I = np.arange(len(train_set[0]))
@@ -280,10 +284,10 @@ def load_hdm05_65(rng, split = (0.6, 0.2, 0.2), fair = True):
                       filename = data_path + 'hdm05_65/data_hdm05_65.npz')
 
 def load_hdm05_actors_65(rng, train=True):
-    return load_hdm05_actors(rng, dir = 'hdm05_65/', n_classes = 26, train=train)
+    return load_hdm05_actors(rng, dir = 'hdm05_65/', n_classes = 65, train=train)
 
 def load_hdm05_actors_easy(rng, train=True):
-    return load_hdm05_actors(rng, dir = 'hdm05_easy/', n_classes = 65, train=train)
+    return load_hdm05_actors(rng, dir = 'hdm05_easy/', n_classes = 26, train=train)
 
 def load_hdm05_actors_original(rng, train=True):
     return load_hdm05_actors(rng, dir = 'hdm05_original/', n_classes = 139, train=train)
