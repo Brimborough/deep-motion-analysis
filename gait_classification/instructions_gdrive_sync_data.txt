@@ -1,5 +1,0 @@
-USERNAME: takusstudents@gmail.com
-PASSWORD: deeplearning
-1) Copy the data you wish to sync with google drive to habibie_jonathan/sync 
-2) type 'grive' and wait for it to finish syncing
-3) You can download your data from google drive
