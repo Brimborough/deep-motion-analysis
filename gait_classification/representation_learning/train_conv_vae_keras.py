@@ -14,6 +14,7 @@ datasets = load_cmu(rng)
 
 # Shape = (MB, 66, 240)
 x_train = datasets[0][0].swapaxes(1, 2)
+x_valid = datasets[1][0].swapaxes(1, 2)
 
 # Shape = (MB, 240, 66)
 input_motion = Input(shape=x_train.shape[1:])
@@ -47,7 +48,7 @@ autoencoder.compile(optimizer='adadelta', loss='mse')
 autoencoder.fit(x_train, x_train,
                 nb_epoch=5,
                 batch_size=100,
-#                validation_data=(x_valid, x_valid),
+                validation_data=(x_valid, x_valid),
                 shuffle=True)
 
 #batch_size = 16
