@@ -41,8 +41,8 @@ class HiddenLayer(object):
         if filename is None: return
         if not filename.endswith('.npz'): filename+='.npz'
         data = np.load(filename)
-        self.W = theano.shared(value=W, borrow=True)
-        self.b = theano.shared(value=b, borrow=True)
+        self.W = theano.shared(value=data['W'], borrow=True)
+        self.b = theano.shared(value=data['b'], borrow=True)
         self.params = [Param(self.W, True), Param(self.b, False)]
     
     def save(self, filename):

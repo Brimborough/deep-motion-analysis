@@ -71,6 +71,53 @@ x = UpSampling1D(length=2)(x)
 x = Convolution1D(256, 25, border_mode='same')(x)
 x = UpSampling1D(length=2)(x)
 x = Convolution1D(128, 25, border_mode='same')(x)
+decoded = Convolution1D(66, 25, activation='linear', border_mode='same')(x)
+
+autoencoder = Model(input_motion	, decoded)
+autoencoder.compile(optimizer='adadelta', loss='mse')
+
+autoencoder.fit(x_train, x_train,
+                nb_epoch=5,
+                batch_size=100,
+                validation_data=(x_valid, x_valid),
+                shuffle=True)
+
+#batch_size = 16
+#original_dim = 784
+#latent_dim = 2
+#intermediate_dim = 128
+#epsilon_std = 0.01
+#nb_epoch = 5
+#
+#x = Input(batch_shape=(batch_size, original_dim))
+
+#h = Dense(intermediate_dim, activation='relu')(x)
+#z_mean = Dense(latent_dim)(h)
+#z_log_std = Dense(latent_dim)(h)
+#
+#def sampling(args):
+#    z_mean, z_log_std = args
+#    epsilon = K.random_normal(shape=(batch_size, latent_dim),
+#                              mean=0., std=epsilon_std)
+#    return z_mean + K.exp(z_log_std) * epsilon
+#
+## note that "output_shape" isn't necessary with the TensorFlow backend
+## so you could write `Lambda(sampling)([z_mean, z_log_std])`
+#z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_std])
+#
+## we instantiate these layers separately so as to reuse them later
+#decoder_h = Dense(intermediate_dim, activation='relu')
+#decoder_mean = Dense(original_dim, activation='sigmoid')
+#h_decoded = decoder_h(z)
+#x_decoded_mean = decoder_mean(h_decoded)
+#
+#def vae_loss(x, x_decoded_mean):
+#    xent_loss = objectives.binary_crossentropy(x, x_decoded_mean)
+=======
+#x = Convolution1D(128, 25, border_mode='same')(x)
+#x = UpSampling1D(length=2)(x)
+#x = Convolution1D(64, 25, activation='relu', border_mode='same')(x)
+>>>>>>> 3fd6deeb7a51146c6e54e392906fdd627c3d57d9
 
 # shape = (240, 64)
 x = UpSampling1D(length=2)(x)
@@ -78,7 +125,12 @@ x = UpSampling1D(length=2)(x)
 x = Convolution1D(66, 25, activation='linear', border_mode='same')(x)
 
 def vae_loss(input_motion, x):
+<<<<<<< HEAD
     mse_loss = objectives.mse(input_motion, x)
+=======
+    xent_loss = objectives.mse(input_motion, x)
+>>>>>>> db7b92dfeb18c72a87ec3ffbdbdf9a377bb88326
+>>>>>>> 3fd6deeb7a51146c6e54e392906fdd627c3d57d9
 #    kl_loss = - 0.5 * K.mean(1 + z_log_std - K.square(z_mean) - K.exp(z_log_std), axis=-1)
     kl_loss = - 0.5 * K.mean(1 + z_log_std - K.square(z_mean) - K.exp(z_log_std))
     return mse_loss + kl_loss

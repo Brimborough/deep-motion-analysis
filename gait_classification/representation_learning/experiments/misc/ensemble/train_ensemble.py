@@ -3,6 +3,8 @@ import sys
 import theano
 import theano.tensor as T
 
+sys.path.append('../../..')
+
 from nn.Ensemble import Ensemble
 from nn.Network import Network
 from nn.HiddenLayer import HiddenLayer

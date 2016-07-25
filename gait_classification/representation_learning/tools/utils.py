@@ -10,6 +10,7 @@ import pickle
 import gzip
 import numpy as np
 import os
+import re
 import sys
 import theano
 import theano.tensor as T
@@ -25,127 +26,6 @@ def scale_to_unit_interval(ndar, eps=1e-8):
     ndar -= ndar.min()
     ndar *= 1.0 / (ndar.max() + eps)
     return ndar
-
-def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
-                       scale_rows_to_unit_interval=True,
-                       output_pixel_vals=True):
-    """
-    Transform an array with one flattened image per row, into an array in
-    which images are reshaped and layed out like tiles on a floor.
-
-    This function is useful for visualizing datasets whose rows are images,
-    and also columns of matrices for transforming those rows
-    (such as the first layer of a neural net).
-
-    :type X: a 2-D ndarray or a tuple of 4 channels, elements of which can
-    be 2-D ndarrays or None;
-    :param X: a 2-D array in which every row is a flattened image.
-
-    :type img_shape: tuple; (height, width)
-    :param img_shape: the original shape of each image
-
-    :type tile_shape: tuple; (rows, cols)
-    :param tile_shape: the number of images to tile (rows, cols)
-
-    :param output_pixel_vals: if output should be pixel values (i.e. int8
-    values) or floats
-
-    :param scale_rows_to_unit_interval: if the values need to be scaled before
-    being plotted to [0,1] or not
-
-
-    :returns: array suitable for viewing as an image.
-    (See:`Image.fromarray`.)
-    :rtype: a 2-d array with same dtype as X.
-
-    """
-
-    assert len(img_shape) == 2
-    assert len(tile_shape) == 2
-    assert len(tile_spacing) == 2
-
-    # The expression below can be re-written in a more C style as
-    # follows :
-    #
-    # out_shape    = [0,0]
-    # out_shape[0] = (img_shape[0]+tile_spacing[0])*tile_shape[0] -
-    #                tile_spacing[0]
-    # out_shape[1] = (img_shape[1]+tile_spacing[1])*tile_shape[1] -
-    #                tile_spacing[1]
-    out_shape = [
-        (ishp + tsp) * tshp - tsp
-        for ishp, tshp, tsp in zip(img_shape, tile_shape, tile_spacing)
-    ]
-
-    if isinstance(X, tuple):
-        assert len(X) == 4
-        # Create an output numpy ndarray to store the image
-        if output_pixel_vals:
-            out_array = np.zeros((out_shape[0], out_shape[1], 4),
-                                    dtype='uint8')
-        else:
-            out_array = np.zeros((out_shape[0], out_shape[1], 4),
-                                    dtype=X.dtype)
-
-        #colors default to 0, alpha defaults to 1 (opaque)
-        if output_pixel_vals:
-            channel_defaults = [0, 0, 0, 255]
-        else:
-            channel_defaults = [0., 0., 0., 1.]
-
-        for i in range(4):
-            if X[i] is None:
-                # if channel is None, fill it with zeros of the correct
-                # dtype
-                dt = out_array.dtype
-                if output_pixel_vals:
-                    dt = 'uint8'
-                out_array[:, :, i] = np.zeros(
-                    out_shape,
-                    dtype=dt
-                ) + channel_defaults[i]
-            else:
-                # use a recurrent call to compute the channel and store it
-                # in the output
-                out_array[:, :, i] = tile_raster_images(
-                    X[i], img_shape, tile_shape, tile_spacing,
-                    scale_rows_to_unit_interval, output_pixel_vals)
-        return out_array
-
-    else:
-        # if we are dealing with only one channel
-        H, W = img_shape
-        Hs, Ws = tile_spacing
-
-        # generate a matrix to store the output
-        dt = X.dtype
-        if output_pixel_vals:
-            dt = 'uint8'
-        out_array = np.zeros(out_shape, dtype=dt)
-
-        for tile_row in range(tile_shape[0]):
-            for tile_col in range(tile_shape[1]):
-                if tile_row * tile_shape[1] + tile_col < X.shape[0]:
-                    this_x = X[tile_row * tile_shape[1] + tile_col]
-                    if scale_rows_to_unit_interval:
-                        # if we should scale values to be between 0 and 1
-                        # do this by calling the `scale_to_unit_interval`
-                        # function
-                        this_img = scale_to_unit_interval(
-                            this_x.reshape(img_shape))
-                    else:
-                        this_img = this_x.reshape(img_shape)
-                    # add the slice to the corresponding position in the
-                    # output array
-                    c = 1
-                    if output_pixel_vals:
-                        c = 255
-                    out_array[
-                        tile_row * (H + Hs): tile_row * (H + Hs) + H,
-                        tile_col * (W + Ws): tile_col * (W + Ws) + W
-                    ] = this_img * c
-        return out_array
-
 
 def get_labels_to_remove(n_instances, n_to_remove):
     """
@@ -294,7 +174,7 @@ def random_split(rng, data, one_hot_labels, proportions):
     return datasets
 
 
-def load_hdm05(rng, split=(0.6, 0.2, 0.2), fair=True, filename = data_path + 'hdm05/data_hdm05.npz'):
+def load_hdm05(rng, split=(0.6, 0.2, 0.2), fair=True, filename = data_path + 'hdm05_easy/data_hdm05.npz'):
 
     sys.stdout.write('... loading data\n')
 
@@ -333,19 +213,80 @@ def load_hdm05(rng, split=(0.6, 0.2, 0.2), fair=True, filename = data_path + 'hd
     # Split data and keep classes balanced
     datasets = fair_split(rng, X, Y, split)
 
+    sys.stdout.write('... done\n')
+
     return datasets
 
-def load_hdm05_small(rng, split = (0.6, 0.2, 0.2), fair = True):
-    return load_hdm05(rng = rng, split = split, fair = fair, 
-                      filename = data_path + 'hdm05/data_hdm05_small.npz')
+def load_hdm05_actors(rng, dir = 'hdm05_easy/', n_classes = 26, train=True):
+
+    sys.stdout.write('... loading data\n')
+
+    match = re.findall('(.*_)(.*)/$', dir)[0]
+
+    get_filename = lambda actor: data_path + dir + 'data_' + match[0] + \
+                                 actor + '_' + match[1] + '.npz'
+
+    to_float         = lambda x: x.astype(theano.config.floatX)
+    get_xy           = lambda d: [d['clips'].swapaxes(1, 2)[:,:-4], d['classes']]
+    get_mean_std     = lambda d: [d['Xmean'], d['Xstd']]
+    get_one_hot      = lambda d: [d[0], one_hot[d[1]]]
+    join_x           = lambda x1, x2: np.concatenate([x1, x2], axis=0)
+    join             = lambda d1, d2: [join_x(d1[0], d2[0]), join_x(d1[1], d2[1])]
+    normalise        = lambda d: [(d[0] - mean) / (std + 1e-10), d[1]]
+    remove_unlabeled = lambda d: [d[0][d[1] != -1 ], d[1][d[1] != -1 ]]
+
+    # Calls functions above
+    process = lambda d: get_one_hot(normalise(remove_unlabeled(get_xy(d))))
+
+    mean, std = get_mean_std(np.load(data_path + dir + 'moments.npz'))
+    one_hot   = np.eye(n_classes)
+
+    data_bd = process(np.load(get_filename('bd')))
+    data_bk = process(np.load(get_filename('bk')))
+    data_dg = process(np.load(get_filename('dg')))
+    data_mm = process(np.load(get_filename('mm')))
+    data_tr = process(np.load(get_filename('tr')))
+
+    if train:
+        train_set = join(data_bd, data_mm)
+        valid_set = data_bk
+    else:
+        train_set = join(join(data_bd, data_mm), data_bk)
+        valid_set = []
+
+    test_set = join(data_tr, data_dg)
+
+    # Randomise training data
+    I = np.arange(len(train_set[0]))
+    rng.shuffle(I) 
+
+    train_set[0] = train_set[0][I]
+    train_set[1] = train_set[1][I]
+
+    sys.stdout.write('... done\n')
+
+    return [train_set, valid_set, test_set]
 
 def load_hdm05_easy(rng, split = (0.6, 0.2, 0.2), fair = True):
     return load_hdm05(rng = rng, split = split, fair = fair, 
-                      filename = data_path + 'hdm05/data_hdm05_easy.npz')
+                      filename = data_path + 'hdm05_easy/data_hdm05_easy.npz')
 
-def load_hdm05_easy_small(rng, split = (0.6, 0.2, 0.2), fair = True):
+def load_hdm05_original(rng, split = (0.6, 0.2, 0.2), fair = True):
     return load_hdm05(rng = rng, split = split, fair = fair, 
-                      filename = data_path + 'hdm05/data_hdm05_easy_small.npz')
+                      filename = data_path + 'hdm05_original/data_hdm05_original.npz')
+
+def load_hdm05_65(rng, split = (0.6, 0.2, 0.2), fair = True):
+    return load_hdm05(rng = rng, split = split, fair = fair, 
+                      filename = data_path + 'hdm05_65/data_hdm05_65.npz')
+
+def load_hdm05_actors_65(rng, train=True):
+    return load_hdm05_actors(rng, dir = 'hdm05_65/', n_classes = 26, train=train)
+
+def load_hdm05_actors_easy(rng, train=True):
+    return load_hdm05_actors(rng, dir = 'hdm05_easy/', n_classes = 65, train=train)
+
+def load_hdm05_actors_original(rng, train=True):
+    return load_hdm05_actors(rng, dir = 'hdm05_original/', n_classes = 139, train=train)
 
 def load_styletransfer(rng, split=(0.6, 0.2, 0.2), labels='combined'):
 
@@ -380,6 +321,9 @@ def load_styletransfer(rng, split=(0.6, 0.2, 0.2), labels='combined'):
     Y = Y[I].astype(theano.config.floatX)
 
     datasets = fair_split(rng, X, Y, split)
+
+    sys.stdout.write('... done\n')
+
     return datasets
 
 def load_cmu(rng, filename = data_path + 'cmu/data_cmu.npz'):
@@ -406,6 +350,8 @@ def load_cmu(rng, filename = data_path + 'cmu/data_cmu.npz'):
     I = np.arange(len(X))
     rng.shuffle(I) 
     X = X[I]
+
+    sys.stdout.write('... done\n')
 
     return [(X,)]
 
