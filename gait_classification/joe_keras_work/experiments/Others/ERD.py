@@ -59,6 +59,8 @@ i = TimeDistributed(Dense(500))(i)
 i = Activation('relu')(i)
 out = TimeDistributed(Dense(66))(i)
 
+model = Model(input=inp,output=out)
+
 def euclid_loss(y_t, y):
 	scaling = 1
 	if y.ndim > 2:
