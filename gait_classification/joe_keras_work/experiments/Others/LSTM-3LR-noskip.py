@@ -60,10 +60,10 @@ def euclid_loss(y_t, y):
 	return scaling * T.mean(T.sqr(y_new-y_t_new))
 
 sgd = SGD(momentum = 0.99, clipnorm=25, lr = 1e-3)
-model.compile(loss=euclid_loss, optimizer=sgd)
+model.compile(loss=euclid_loss, optimizer='nadam')
 
 print('Training model...')
-model.fit(train_x, train_y, batch_size=25, nb_epoch=100)
+model.fit(train_x, train_y, batch_size=10, nb_epoch=100)
 
 score = model.evaluate(test_x,test_y)
 print(score)
