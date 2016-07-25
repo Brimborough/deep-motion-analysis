@@ -8,8 +8,8 @@ from models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM, GRU, Input
 from keras.layers.normalization import BatchNormalization
-#from keras.optimizers import Nadam
-from optimizers import SGD
+from keras.optimizers import Nadam
+#from optimizers import SGD
 import keras
 from keras.utils.data_utils import get_file
 import numpy as np
@@ -39,20 +39,25 @@ test_y = data[310:, 1:]
 
 # build the model: 2 stacked LSTM
 print('Build model...')
-model = Sequential()
-#Potentially put LSTM here also, going over entire sequence controls....
-model.add(TimeDistributed(Dense(500),input_shape=(239,66)))
-model.add(Activation('relu'))
-model.add(TimeDistributed(Dense(500)))
-model.add(LSTM(1000, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal'))
-model.add(LSTM(1000, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal'))
-model.add(TimeDistributed(Dense(500)))
-model.add(Activation('relu'))
-model.add(TimeDistributed(Dense(500)))
-model.add(Activation('relu'))
-model.add(TimeDistributed(Dense(66)))
+inp = Input(shape=(239,66))
+i = TimeDistributed(Dense(500))(inp)
+i = Activation('relu')(i)
+i = TimeDistributed(Dense(500))(i)
+
+lstm1 = LSTM(1000, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal')(i)
+
+input_lstm2 = merge([i, lstm1], mode='concat', concat_axis=2)
+lstm2 = LSTM(1000, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal')
+
+input_fcout = merge([lstm2, lstm1], mode='concat', concat_axis=2)
+
+i = TimeDistributed(Dense(500))(i)
+i = Activation('relu')(i)
+i = TimeDistributed(Dense(500))(i)
+i = Activation('relu')(i)
+out = TimeDistributed(Dense(66))(i)
 
 def euclid_loss(y_t, y):
 	scaling = 1
@@ -71,5 +76,5 @@ model.fit(train_x, train_y, batch_size=25, nb_epoch=1200)
 
 score = model.evaluate(test_x,test_y)
 print(score)
-model.save_weights('../../weights/ERD-ns.hd5', overwrite=True)
+model.save_weights('../../weights/ERD.hd5', overwrite=True)
 
