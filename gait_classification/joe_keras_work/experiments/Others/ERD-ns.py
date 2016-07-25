@@ -8,8 +8,7 @@ from models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM, GRU, Input
 from keras.layers.normalization import BatchNormalization
-#from keras.optimizers import Nadam
-from optimizers import SGD
+from keras.optimizers import Nadam
 import keras
 from keras.utils.data_utils import get_file
 import numpy as np
