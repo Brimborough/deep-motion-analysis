@@ -2,34 +2,20 @@
 Reference: "Auto-Encoding Variational Bayes" https://arxiv.org/abs/1312.6114
 '''
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+
 from keras.layers import Input, Dense, Lambda
 from keras.models import Model
 from keras import backend as K
 from keras import objectives
 from keras.datasets import mnist
 
-from tools.utils import load_styletransfer
-
-rng = np.random.RandomState(23455)
-
-datasets = load_styletransfer(rng)
-
-x_train = datasets[0][0]
-x_valid = datasets[1][0]
-
-x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
-x_valid = x_valid.reshape(x_valid.shape[0], np.prod(x_valid.shape[1:]))
-
-y_train = np.argmax(datasets[0][1], axis=1)
-y_valid = np.argmax(datasets[1][1], axis=1)
-
-batch_size = 1
-original_dim = x_train.shape[1]
-latent_dim = 2
+batch_size = 16
+original_dim = 784
+latent_dim = 10
 intermediate_dim = 128
 epsilon_std = 0.01
-nb_epoch = 15
+nb_epoch = 40
 
 x = Input(batch_shape=(batch_size, original_dim))
 h = Dense(intermediate_dim, activation='relu')(x)
@@ -60,22 +46,30 @@ def vae_loss(x, x_decoded_mean):
 vae = Model(x, x_decoded_mean)
 vae.compile(optimizer='rmsprop', loss=vae_loss)
 
+# train the VAE on MNIST digits
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+x_train = x_train.astype('float32') / 255.
+x_test = x_test.astype('float32') / 255.
+x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
+x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
+
 vae.fit(x_train, x_train,
         shuffle=True,
         nb_epoch=nb_epoch,
         batch_size=batch_size,
-        validation_data=(x_valid, x_valid))
+        validation_data=(x_test, x_test))
 
-# build a model to project inputs on the latent space
-encoder = Model(x, z_mean)
-
-# display a 2D plot of the digit classes in the latent space
-x_train_encoded = encoder.predict(x_train, batch_size=batch_size)
-plt.figure(figsize=(6, 6))
-plt.scatter(x_train_encoded[:, 0], x_train_encoded[:, 1], c=y_train)
-plt.colorbar()
-plt.show()
-
+## build a model to project inputs on the latent space
+#encoder = Model(x, z_mean)
+#
+## display a 2D plot of the digit classes in the latent space
+#x_test_encoded = encoder.predict(x_test, batch_size=batch_size)
+#plt.figure(figsize=(6, 6))
+#plt.scatter(x_test_encoded[:, 0], x_test_encoded[:, 1], c=y_test)
+#plt.colorbar()
+#plt.show()
+#
 ## build a digit generator that can sample from the learned distribution
 #decoder_input = Input(shape=(latent_dim,))
 #_h_decoded = decoder_h(decoder_input)
@@ -101,3 +95,4 @@ plt.show()
 #plt.figure(figsize=(10, 10))
 #plt.imshow(figure)
 #plt.show()
+#
