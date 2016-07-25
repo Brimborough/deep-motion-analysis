@@ -47,11 +47,11 @@ i = TimeDistributed(Dense(500))(i)
 l1 = LSTM(1000, return_sequences=True, consume_less='gpu', \
                init='glorot_normal')(i)
 
-input_lstm2 = merge([i, lstm1], mode='concat', concat_axis=2)
+input_lstm2 = merge([i, l1], mode='concat', concat_axis=2)
 l2 = LSTM(1000, return_sequences=True, consume_less='gpu', \
                init='glorot_normal')
 
-input_fcout = merge([lstm2, lstm1], mode='concat', concat_axis=2)
+input_fcout = merge([l2, l1], mode='concat', concat_axis=2)
 
 i = TimeDistributed(Dense(500))(i)
 i = Activation('relu')(i)
