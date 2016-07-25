@@ -4,9 +4,9 @@
 
 from __future__ import print_function
 
-from models import Sequential
+from models import Model
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
-from keras.layers import LSTM, GRU, Input
+from keras.layers import LSTM, GRU, Input, merge
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Nadam
 #from optimizers import SGD
