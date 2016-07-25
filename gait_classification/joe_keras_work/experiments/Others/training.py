@@ -815,11 +815,12 @@ class Model(Container):
                 noise = noise_list[noise_epochs.index(epoch)]
             
             if noise > 0 :
-                [T1,N1,D1] = [len(ins[0]), len(ins[1]), len(ins[2])]
+                [T1,N1,D1] = [len(ins[0]), len(ins[0][0]), len(ins[0][0][0])]
                 binomial_prob = rng.binomial(1,0.5,size=(T1,N1,1))
                 noise_to_add = rng.normal(scale=noise,size=[T1,N1,D1])
-                noise_sample = np.repeat(binomial_prob,noise_to_add.shape[2],axis=2) * noise_to_add
-                ins_noise = ins + noise_sample
+                noise_sample = np.repeat(binomial_prob,noise_to_add.shape[2],axis=2) * noise_to_add                
+                # A list of temporal time 
+                ins_noise = [ins[0] + noise_sample, ins[1], ins[2]]
             else:
                 ins_noise = ins
             
