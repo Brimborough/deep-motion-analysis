@@ -53,7 +53,7 @@ l2 = LSTM(1000, return_sequences=True, consume_less='gpu', \
 
 input_fcout = merge([l2, l1], mode='concat', concat_axis=2)
 
-i = TimeDistributed(Dense(500))(i)
+i = TimeDistributed(Dense(500))(input_fcout)
 i = Activation('relu')(i)
 i = TimeDistributed(Dense(500))(i)
 i = Activation('relu')(i)
