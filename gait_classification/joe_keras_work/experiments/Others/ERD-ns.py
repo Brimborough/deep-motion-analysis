@@ -66,7 +66,7 @@ nadam = Nadam(clipnorm=25)
 model.compile(loss=euclid_loss, optimizer=nadam)
 
 print('Training model...')
-model.fit(train_x, train_y, batch_size=25, nb_epoch=3500)
+model.fit(train_x, train_y, batch_size=25, nb_epoch=3800)
 
 score = model.evaluate(test_x,test_y)
 print(score)
