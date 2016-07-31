@@ -1,9 +1,9 @@
 from __future__ import print_function
 import os    
 os.environ['THEANO_FLAGS'] = "device=cpu"
-from keras.models import Sequential
+from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
-from keras.layers import LSTM
+from keras.layers import LSTM, merge
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Nadam
 import keras
@@ -45,5 +45,5 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 num_frame_pred = 28
 for frame in [1,2,5,8,10]:
-	visualise(model, '3LSTMC-3x256.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\
+	visualise(model, '256x3-2FC.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\
 	 anim_frame_start=((30-num_frame_pred)*8), anim_frame_end=232, test_start=310, control=True)
