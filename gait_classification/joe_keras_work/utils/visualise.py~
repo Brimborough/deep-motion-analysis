@@ -21,7 +21,7 @@ def data_util(preds,x, num_frame_pred):
     return d2
 
 def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10,\
-        orig_file='Joe/edin_shuffled.npz', pre_lstm='Joe/pre_proc_lstm.npz', extracted='Joe/sequential_final_frame.npz' ,test_start=310, filename=None):
+        orig_file='Joe/edin_shuffled.npz', pre_lstm='Joe/pre_proc_lstm.npz', extracted='Joe/sequential_final_frame.npz' ,test_start=310):
     
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/'+orig_file)['clips']
@@ -116,4 +116,4 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
 
 
-    animation_plot([Xorig, Xrecn, Xpred], filename=filename,interval=15.15, labels=['Root','Reconstruction', 'Predicted'])
+    animation_plot([Xorig, Xrecn, Xpred], filename="test.npz",interval=15.15, labels=['Root','Reconstruction', 'Predicted'])

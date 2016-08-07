@@ -16,32 +16,27 @@ sys.path.append('../../utils/')
 from visualise_before import visualise
 
 print('Build model...')
-inp = Input(shape=(29,259))
-i = TimeDistributed(Dense(256))(inp)
-i = Activation(keras.layers.advanced_activations.ELU(alpha=1.0))(i)
-
-l1 = LSTM(256, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal')(i)
-
-input_lstm2 = merge([i, l1], mode='concat')
-l2 = LSTM(256, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal')(input_lstm2)
-
-input_lstm3 = merge([i, l2], mode='concat')
-l3 = LSTM(256, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal')(input_lstm3)
-
-input_fcout = merge([l2, l1, l3], mode='concat')
-
-i = Dropout(0.2)(input_fcout)
-i = TimeDistributed(Dense(256))(i)
-i = Activation(keras.layers.advanced_activations.ELU(alpha=1.0))(i)
-i = TimeDistributed(Dense(256))(i)
-out = Activation(keras.layers.advanced_activations.ELU(alpha=1.0))(i)
-
-model = Model(input=inp,output=out)
-
+model = Sequential()
+#Potentially put LSTM here also, going over entire sequence controls....
+model.add(TimeDistributed(Dense(256), input_shape=(29, 259)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(Dropout(0.2))
+model.add(TimeDistributed(Dense(256)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+# TimedistributedDense on top - Can then set output vectors to be next sequence!
 model.compile(loss='mean_squared_error', optimizer='nadam')
+
+data = np.load('../../../data/Joe/sequential_final_frame.npz')
+control_sig = np.load('../../../data/Joe/edin_shuffled_control.npz')['control'].swapaxes(1,2)
+data_x = np.concatenate((data['test_x'] , control_sig[310:,8::8]), axis=2)
+data_y = data['test_y']
+print('RMSE: ' + str(model.evaluate(data_x, data_y)))
 
 num_frame_pred = 28
 for frame in [1,2,5,8,10]:

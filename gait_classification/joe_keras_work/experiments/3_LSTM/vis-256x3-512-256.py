@@ -33,7 +33,8 @@ l3 = LSTM(256, return_sequences=True, consume_less='gpu', \
 
 input_fcout = merge([l2, l1, l3], mode='concat')
 
-i = TimeDistributed(Dense(256))(input_fcout)
+i = Dropout(0.2)(input_fcout)
+i = TimeDistributed(Dense(512))(i)
 i = Activation(keras.layers.advanced_activations.ELU(alpha=1.0))(i)
 i = TimeDistributed(Dense(256))(i)
 out = Activation(keras.layers.advanced_activations.ELU(alpha=1.0))(i)
@@ -44,5 +45,5 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 num_frame_pred = 28
 for frame in [1,2,5,8,10]:
-	visualise(model, '256x3-2FC.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\
+	visualise(model, '256x3-2FC-SNN.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\
 	 anim_frame_start=((30-num_frame_pred)*8), anim_frame_end=232, test_start=310, control=True)
