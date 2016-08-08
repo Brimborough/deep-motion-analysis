@@ -1,5 +1,6 @@
 from __future__ import print_function
-
+import os    
+os.environ['THEANO_FLAGS'] = "device=cpu"
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM,GRU
