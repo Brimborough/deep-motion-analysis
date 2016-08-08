@@ -71,21 +71,21 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
             changed += pnts
             
         return changed
-        
+    plt.title('LSTM-256-Dropout-0.8')
     plt.tight_layout()
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])), interval=interval)
-
+    filename = "LSTM-256d.mp4"
     if filename != None:
-        #ani.save(filename, fps=30, bitrate=13934)
-        
+        ani.save(filename, fps=30, bitrate=13934)
+        '''
         data = {}
         for i, a, f in zip(range(len(animations)), animations, footsteps):
             data['anim_%i' % i] = a
             data['anim_%i_footsteps' % i] = f
         np.savez_compressed(filename.replace('.mp4','.npz'), **data)
-        
+        '''
     try:
         plt.show()
     except AttributeError as e:

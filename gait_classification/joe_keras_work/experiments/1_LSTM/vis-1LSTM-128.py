@@ -13,7 +13,7 @@ import random
 import sys
 import theano
 sys.path.append('../../utils/')
-from visualise import visualise
+from visualise_before import visualise
 
 # build the model: 2 stacked LSTM
 print('Build model...')
@@ -29,4 +29,4 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
-visualise(model, '1LSTM-128bn.hd5', frame=6, num_frame_pred=1, num_pred_iter=50, anim_frame_start=0)
+visualise(model, '1LSTM-128bn.hd5', frame=3, num_frame_pred=24, num_pred_iter=0, anim_frame_end=224)

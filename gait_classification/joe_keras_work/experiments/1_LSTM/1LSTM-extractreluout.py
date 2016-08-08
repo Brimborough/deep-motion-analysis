@@ -50,11 +50,12 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 
 model.compile(loss='mean_squared_error', optimizer='nadam')
-#model.load_weights('../../weights/1LSTM-256-first.hd5')
+print('Training model...')
+model.fit(train_n, train_m, batch_size=10, nb_epoch=50)
 
 model2 = Sequential()
 model2.add(TimeDistributed(Dense(256, weights=model.layers[0].get_weights()), batch_input_shape=(11, 29, 259)))
-model2.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+model2.add(Activation('relu'))
 model2.compile(loss='mean_squared_error', optimizer='nadam')
 
 activations = model2.predict(test_n, batch_size=11)
