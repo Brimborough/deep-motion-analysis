@@ -29,5 +29,4 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 
-visualise(model, '1LSTM-128d.hd5', frame=6, num_frame_pred=24, num_pred_iter=1,\
-	anim_frame_start=56, anim_frame_end=240, test_start=310)
+visualise(model, '1LSTM-128d.hd5', frame=3, num_frame_pred=24, num_pred_iter=0, anim_frame_end=224, test_start=310)

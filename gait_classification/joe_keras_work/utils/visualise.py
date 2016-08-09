@@ -75,7 +75,8 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         data_loop = data_x[:, 1:] # Remove the 1st frame so we can loop again
         old_preds = preds
     
-    data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
+    #data_x = np.concatenate((data_x, data['train_x'][frame:frame+1,-1:]),axis=1)
+    data_x = (data_x*pre_lat['std']) + pre_lat['mean']# Sort out the data again, uses final 30
 
     dat = data_x.swapaxes(2, 1) # Swap back axes
 

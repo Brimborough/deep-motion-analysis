@@ -56,7 +56,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         frame_orig = frame
     
     data_x2 = data['test_x'].copy()
-    print(data_control.shape)
     frames = frame+1
     #Load model
     model.load_weights('../../weights/'+ weight_file)
@@ -132,23 +131,28 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     #Final assertion things aren't the same before copying
     assert not (np.array_equal(data_loop, data_loop2))
 
-    if(num_pred_iter == 0): # 0 for ground truth predictions
+    if((num_pred_iter == 0) and (control)): # 0 for ground truth predictions
         data_x = data_loop[:,:,:-3].copy() # Copy everything but the final 3 control signals
-    else:
+    elif(control):
         data_x = data_x[:,:,:-3].copy()
 
-    assert not (np.array_equal(data_x, data_x2))
+    #assert not (np.array_equal(data_x, data_x2))
+        
     if(control):
         #orig = orig[:,:,:-3]
         data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
 
+    if(True):
+        data_x = data_loop[:,:,:].copy()
+        assert not (np.array_equal(data_x, data_x2))
+        data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
     #check = data_x[:,4:5]
     data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
     dat = data_x.swapaxes(2, 1) # Swap back axes
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
-    print('RMSE: '+str(rmse(dat,orig)))
+    #print('RMSE: '+str(rmse(dat,orig)))
 
     if(frame==11):
         dat = dat[frame:]
@@ -156,6 +160,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     else:
         dat = dat[frame:frames] #Only visualise the frame we want
         orig = orig[frame:frames]
+
 
     from network import network
     network.load([
@@ -165,7 +170,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         '../../../models/conv_ae/layer_2.npz', None, None,
     ])
 
-
+    print(dat.shape)
     # Run find_frame.py to find which original motion frame is being used.
     Xorig = X[frame_orig:frame_orig+1]
 

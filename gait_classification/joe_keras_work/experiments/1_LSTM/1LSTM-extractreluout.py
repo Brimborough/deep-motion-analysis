@@ -50,9 +50,12 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 
 model.compile(loss='mean_squared_error', optimizer='nadam')
+
 model.fit(train_n, train_m, batch_size=10, nb_epoch=200)
 model.save_weights('act')
-model2=Sequential()
+
+
+model2 = Sequential()
 model2.add(TimeDistributed(Dense(256, weights=model.layers[0].get_weights()), batch_input_shape=(11, 29, 259)))
 model2.add(Activation('relu'))
 model2.compile(loss='mean_squared_error', optimizer='nadam')

@@ -72,11 +72,14 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
             changed += pnts
             
         return changed
+
     plt.title(title.strip())
+
     plt.tight_layout()
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])), interval=interval)
+
     filename=filename.strip()
     print(type(filename))
     print(type(title))

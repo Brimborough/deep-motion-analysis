@@ -3,7 +3,8 @@
 '''
 
 from __future__ import print_function
-
+import os
+os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2012/bin/x86_64-darwin'
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM, GRU
@@ -58,3 +59,37 @@ model2.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model2.compile(loss='mean_squared_error', optimizer='nadam')
 
 activations = model2.predict(test_n, batch_size=11)
+y = np.mean(np.mean(activations,axis=0),axis=0)
+import matplotlib.pyplot as plt
+plt.plot(np.arange(0,256),y, color='r', marker='o', linestyle="None",label="ELU units")
+plt.axhline(y.mean(),xmin=.85, color='r', linestyle='dashed', linewidth=2, label="ELU mean - " + str(np.mean(activations))[:4])
+
+model = Sequential()
+model.add(TimeDistributed(Dense(256), input_shape=(29, 259)))
+model.add(Activation('relu'))
+model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
+               init='glorot_normal'))
+model.add(TimeDistributed(Dense(259)))
+model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
+# TimedistributedDense on top - Can then set output vectors to be next sequence!
+
+model.compile(loss='mean_squared_error', optimizer='nadam')
+model.load_weights('act')
+model2 = Sequential()
+model2.add(TimeDistributed(Dense(256, weights=model.layers[0].get_weights()), batch_input_shape=(11, 29, 259)))
+model2.add(Activation('relu'))
+model2.compile(loss='mean_squared_error', optimizer='nadam')
+
+
+activations = model2.predict(test_n, batch_size=11)
+y = np.mean(np.mean(activations,axis=0),axis=0)
+import matplotlib.pyplot as plt
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.plot(np.arange(0,256),y,marker='o', linestyle="None", color='k', label="ReLU units")
+plt.axhline(y.mean(), xmin=0.85, color='k', linestyle='dashed', linewidth=2, label="ReLU mean - 0.4")
+plt.legend(bbox_to_anchor=(0.33, 1.1), loc=2, borderaxespad=0.)
+plt.xlabel('Unit')
+plt.ylabel('Mean Activation')
+plt.savefig('elurelumean.pdf', format='pdf', dpi='1200')
+plt.show()
