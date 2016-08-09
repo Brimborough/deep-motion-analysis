@@ -138,15 +138,18 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         #orig = orig[:,:,:-3]
         data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
 
+    print(data_x.shape)
+    print(orig.shape)
+    print('RMSE: '+str(rmse(data_x,orig)))
     #check = data_x[:,4:5]
     data_x = (data_x*data_std) + data_mean # Sort out the data again, uses final 30
     data_x = data_x.swapaxes(2, 1) # Swap back axes
     orig = (orig*data_std) + data_mean
     orig = orig.swapaxes(2,1)
-    print(data_x.shape)
-    print(orig.shape)
-    
+   
     for frame in [1,2,5,8,10]:
         pred = data_x[frame:frame+1,:, anim_frame_start:anim_frame_end]
         root = orig[frame:frame+1,:, anim_frame_start:anim_frame_end]
-        animation_plot([root, pred],interval=15.15, labels=['Root', 'Predicted'])
+        title = 'ERD Sample '+str(frame)
+        filename='erdsample'+str(frame)
+        animation_plot([root, pred],interval=15.15, labels=['Root', 'Predicted'], title=title, filename=filename)

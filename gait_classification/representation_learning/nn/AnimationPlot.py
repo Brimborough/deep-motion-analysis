@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+from matplotlib import rc
+rc('backend', qt4="PySide")
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
@@ -9,7 +10,7 @@ from matplotlib.animation import ArtistAnimation
 
 from nn.Quaternions import Quaternions
 
-def animation_plot(animations, filename=None, ignore_root=False, interval=33.33, labels=[]):
+def animation_plot(animations, filename=None, ignore_root=False, interval=33.33, labels=[], title=None):
     
     for ai in range(len(animations)):
         anim = np.swapaxes(animations[ai][0].copy(), 0, 1)
@@ -71,21 +72,23 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
             changed += pnts
             
         return changed
-        
+    plt.title(title.strip())
     plt.tight_layout()
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])), interval=interval)
-
+    filename=filename.strip()
+    print(type(filename))
+    print(type(title))
     if filename != None:
-        #ani.save(filename, fps=30, bitrate=13934)
-        
+        ani.save(filename, fps=30, bitrate=13934)
+        '''
         data = {}
         for i, a, f in zip(range(len(animations)), animations, footsteps):
             data['anim_%i' % i] = a
             data['anim_%i_footsteps' % i] = f
         np.savez_compressed(filename.replace('.mp4','.npz'), **data)
-        
+        '''
     try:
         plt.show()
     except AttributeError as e:
