@@ -39,6 +39,7 @@ data_y = data['test_y']
 print('RMSE: ' + str(model.evaluate(data_x, data_y)))
 
 num_frame_pred = 28
-for frame in [1,2,5,8,10]:
-	visualise(model, '3LSTMC-3x256.hd5',orig_file="Joe/edin_shuffled.npz", frame=frame, num_frame_pred=num_frame_pred, num_pred_iter=0,\
-	 anim_frame_start=((30-num_frame_pred)*8), anim_frame_end=232, test_start=310, control=True)
+visualise(model, '3LSTMC-3x256.hd5',orig_file="Joe/edin_shuffled.npz",num_frame_pred=num_frame_pred, num_pred_iter=0,\
+	 anim_frame_start=((30-num_frame_pred)*8), anim_frame_end=232, test_start=310, control=True, \
+	 title="LSTM(256)-LSTM(256)-LSTM(256)-Dropout(0.2) Sample", filename="lstm256x3s")
+

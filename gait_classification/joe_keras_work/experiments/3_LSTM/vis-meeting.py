@@ -13,7 +13,7 @@ import random
 import sys
 import theano
 sys.path.append('../../utils/')
-from visualise_before import visualise
+from visualise_meeting import visualise
 
 # build the model: 2 stacked LSTM
 print('Build model...')
@@ -43,7 +43,7 @@ model.compile(loss='mean_squared_error', optimizer='nadam')
 
 num_frame_pred = 28
 visualise(model, '256x3-1FCNN.hd5',orig_file="Joe/edin_shuffled.npz", num_frame_pred=num_frame_pred, num_pred_iter=0,\
-	 anim_frame_start=((30-num_frame_pred)*8), anim_frame_end=232, test_start=310, control=True, \
-	 title="Skip Connections Sample", filename="256x3skips")
+	 anim_frame_start=((23)*8), anim_frame_end=((27)*8), test_start=310, control=True, \
+	 title="Prediction comparison", filename="meetings")
 
 

@@ -28,7 +28,7 @@ def rmse(predictions, targets):
 
 def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0, anim_frame_end=240, num_pred_iter=10,\
         orig_file='Joe/edin_shuffled.npz', pre_lstm='Joe/pre_proc_lstm.npz',\
-        extracted='Joe/sequential_final_frame.npz' ,test_start=310, copy_root_velocities=False, control=False, mixture=False):
+        extracted='Joe/sequential_final_frame.npz' ,test_start=310, copy_root_velocities=False, control=False, mixture=False, filename=None, title=None):
     
     #Load the preprocessed version, saving on computation
     X = np.load('../../../data/'+orig_file)['clips']
@@ -106,7 +106,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     num_frame_pred = 1
     old_preds = data_loop[:,-num_frame_pred:].copy()
     
-    #print(rmse(data_loop[:,:,:-3],orig[:,:-1]))
 
     for i in range(num_pred_iter):
         preds = model.predict(data_loop) # SHAPE - [frames,29,256].
@@ -136,31 +135,29 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     elif(control):
         data_x = data_x[:,:,:-3].copy()
 
-    #assert not (np.array_equal(data_x, data_x2))
+    assert not (np.array_equal(data_x, data_x2))
         
     if(control):
         #orig = orig[:,:,:-3]
         data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
 
-    if(True):
-        data_x = data_loop[:,:,:].copy()
-        assert not (np.array_equal(data_x, data_x2))
-        data_x = np.concatenate((data_x, data_y[:,-1:]), axis=1)
     #check = data_x[:,4:5]
     data_x = (data_x*pre_lat['std']) + pre_lat['mean'] # Sort out the data again, uses final 30
     dat = data_x.swapaxes(2, 1) # Swap back axes
     orig = (orig*pre_lat['std']) + pre_lat['mean']
     orig = orig.swapaxes(2,1)
 
-    #print('RMSE: '+str(rmse(dat,orig)))
+    print('RMSE: '+str(rmse(dat,orig)))
 
+    '''
     if(frame==11):
         dat = dat[frame:]
         orig = orig[frame:]
     else:
         dat = dat[frame:frames] #Only visualise the frame we want
         orig = orig[frame:frames]
-
+    '''
+    
 
     from network import network
     network.load([
@@ -170,55 +167,38 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         '../../../models/conv_ae/layer_2.npz', None, None,
     ])
 
-    print(dat.shape)
-    # Run find_frame.py to find which original motion frame is being used.
-    Xorig = X[frame_orig:frame_orig+1]
+    def auto(X,orig,dat):
+        # Run find_frame.py to find which original motion frame is being used.
+        Xorig = X
 
-    # Transform dat back to original latent space
-    shared = theano.shared(orig).astype(theano.config.floatX)
+        # Transform dat back to original latent space
+        shared = theano.shared(orig).astype(theano.config.floatX)
 
-    Xrecn = InverseNetwork(network)(shared).eval()
-    Xrecn = np.array(Xrecn)
+        Xrecn = InverseNetwork(network)(shared).eval()
+        Xrecn = np.array(Xrecn)
 
-    # Transform dat back to original latent space
-    shared2 = theano.shared(dat).astype(theano.config.floatX)
+        # Transform dat back to original latent space
+        shared2 = theano.shared(dat).astype(theano.config.floatX)
 
-    Xpred = InverseNetwork(network)(shared2).eval()
-    Xpred = np.array(Xpred) # Just Decoding
-    #Xrecn = np.array(AutoEncodingNetwork(network)(Xrecn).eval()) # Will the AE help solve noise.
+        Xpred = InverseNetwork(network)(shared2).eval()
+        Xpred = np.array(Xpred) # Just Decoding
+        #Xrecn = np.array(AutoEncodingNetwork(network)(Xrecn).eval()) # Will the AE help solve noise.
 
-    # Last 3 - Velocities so similar root
-    if(copy_root_velocities):
-        Xrecn[:, -3:] = Xorig[:, -3:]
-        Xpred[:, -3:] = Xorig[:, -3:]
+        # Last 3 - Velocities so similar root
+        if(copy_root_velocities):
+            Xrecn[:, -3:] = Xorig[:, -3:]
+            Xpred[:, -3:] = Xorig[:, -3:]
 
 
-    #Back to original data space
-    Xorig = ((Xorig * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
-    Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
-    Xpred = ((Xpred * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+        #Back to original data space
+        Xorig = ((Xorig * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+        Xrecn = ((Xrecn * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
+        Xpred = ((Xpred * preprocess['Xstd']) + preprocess['Xmean'])[:,:,anim_frame_start:anim_frame_end]
 
-    def find_rmse():
-        train_x = data['train_x']
-        min_rmse = 10
-        low_i = 200
-        low_x = 1000
-        checki = check
-        for x in range(0,310):
-            for i in range(0,29):
-                current = rmse(checki, train_x[x,i])
-                if current < min_rmse:
-                    if not (np.isnan(current)):
-                        min_rmse=rmse(checki, train_x[x,i])
-                        low_i = i
-                        low_x = x
-        print(min_rmse)
-        print(low_i)
-        print(low_x)
-        return x
-            #frame 4 compare to all others
-    #x = find_rmse()
-    # add in check when it moves from mean pose to normal then do checki.
-    #most_like = X[x:x+1]
-    #most_like = ((most_like * preprocess['Xstd']) + preprocess['Xmean'])[:,:,0:240]
-    animation_plot([Xorig, Xrecn, Xpred],interval=15.15, labels=['Root','Reconstruction', 'Predicted'])
+        return Xorig, Xrecn, Xpred
+
+    for frame in [1,2,5,8,10]:
+        Xorig,Xrecn,Xpred = auto(X[frame+test_start:frame+test_start+1], orig[frame:frame+1],dat[frame:frame+1])
+        titl = title+" "+str(frame)
+        filname = filename+ str(frame) + ".mp4"
+        animation_plot([Xorig, Xrecn, Xpred],interval=15.15, labels=['Root','Reconstruction', 'Predicted'], title=titl, filename=filname)

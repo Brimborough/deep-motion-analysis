@@ -1,6 +1,5 @@
 from __future__ import print_function
-import os    
-os.environ['THEANO_FLAGS'] = "device=cpu"
+
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, TimeDistributed
 from keras.layers import LSTM
@@ -13,26 +12,22 @@ import random
 import sys
 import theano
 sys.path.append('../../utils/')
-from visualise_after import visualise
+from visualise_before import visualise
 
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-#Potentially put LSTM here also, going over entire sequence controls....
-model.add(TimeDistributed(Dense(256), input_shape=(29, 280)))
+model.add(TimeDistributed(Dense(256), input_shape=(29, 256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
+model.add(LSTM(512, return_sequences=True, consume_less='gpu', \
                init='glorot_normal'))
-model.add(LSTM(256, return_sequences=True, consume_less='gpu', \
-               init='glorot_normal'))
-model.add(Dropout(0.2))
+model.add(Dropout(0.1))
 model.add(TimeDistributed(Dense(256)))
 model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 # TimedistributedDense on top - Can then set output vectors to be next sequence!
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
-visualise(model, '256-256-256-allv2.hd5',orig_file="Joe/edin_shuffled.npz", num_frame_pred=28, num_pred_iter=0,\
-		 anim_frame_start=((30-28)*8), anim_frame_end=232, test_start=310, control=True, control_type='All',\
-	 title="All Of The Control Signal Sample", filename="256x3ALLs")
+
+visualise(model, '2LSTM-256-512d-0.1.hd5',orig_file="Joe/edin_shuffled.npz", frame=1, num_frame_pred=24, num_pred_iter=1, anim_frame_end=224, test_start=310)
