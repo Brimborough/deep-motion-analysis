@@ -22,6 +22,7 @@ from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
 
 control = np.load('../../../data/Joe/edin_shuffled_control.npz')['control']
+control = control.swapaxes(2,1)
 train_control = control[:310]
 test_control = control[310:]
 data = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
@@ -31,8 +32,6 @@ data_std = data.std()
 data_mean = data.mean(axis=2).mean(axis=0)[np.newaxis, :, np.newaxis]
 
 data = (data - data_mean) / data_std
-print(train_control.shape)
-print(data.shape)
 train_x = data[:310, :-1]
 train_x = np.concatenate((train_x, train_control[:,:239]), axis=2)
 train_y = data[:310, 1:]
@@ -42,12 +41,13 @@ test_x = np.concatenate((test_x, test_control[:,:239]), axis=2)
 test_y = data[310:, 1:]
 test_y = np.concatenate((test_y, test_control[:,1:]), axis=2)
 
-
+print(train_x.shape)
+print(train_y.shape)
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
 #Potentially put LSTM here also, going over entire sequence controls....
-model.add(TimeDistributed(Dense(500),input_shape=(239,66)))
+model.add(TimeDistributed(Dense(500),input_shape=(239,69)))
 model.add(Activation('relu'))
 model.add(TimeDistributed(Dense(500)))
 model.add(LSTM(1000, return_sequences=True, consume_less='gpu', \
@@ -58,7 +58,7 @@ model.add(TimeDistributed(Dense(500)))
 model.add(Activation('relu'))
 model.add(TimeDistributed(Dense(500)))
 model.add(Activation('relu'))
-model.add(TimeDistributed(Dense(66)))
+model.add(TimeDistributed(Dense(69)))
 
 def euclid_loss(y_t, y):
 	scaling = 1
