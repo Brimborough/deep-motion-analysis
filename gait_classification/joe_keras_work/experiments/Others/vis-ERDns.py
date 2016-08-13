@@ -48,6 +48,6 @@ nadam = Nadam(clipnorm=25)
 model.compile(loss=euclid_loss, optimizer=nadam)
 
 
-num_frame_pred = 160
+num_frame_pred = 24*8
 visualise(model, 'ERD-ns.hd5',orig_file="Joe/edin_shuffled.npz", num_frame_pred=num_frame_pred, num_pred_iter=1,\
-	 anim_frame_start=150, test_start=310, control=False)
+	 anim_frame_end=224, test_start=310, control=False)

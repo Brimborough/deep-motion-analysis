@@ -2,12 +2,7 @@ import numpy as np
 import os
 #os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2012/bin/x86_64-darwin'
 import matplotlib
-matplotlib.use('TkAgg')
-#from matplotlib import rc
-#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-## for Palatino and other serif fonts use:
-#rc('font',**{'family':'serif','serif':['Palatino']})
-#rc('text', usetex=True)
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
@@ -79,12 +74,19 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
             changed += pnts
             
         return changed
-    plt.title(title)
+
+
+    plt.title(title.strip())
     plt.tight_layout()
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])), interval=interval)
-    #filename = "lstmc-512-10.mp4"
+
+
+    filename=filename.strip()
+    print(type(filename))
+    print(type(title))
+
     if filename != None:
         ani.save(filename, fps=30, bitrate=13934)
         '''
