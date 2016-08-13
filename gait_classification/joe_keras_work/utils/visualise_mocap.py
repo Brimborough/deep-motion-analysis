@@ -151,5 +151,5 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         pred = data_x[frame:frame+1,:, anim_frame_start:anim_frame_end]
         root = orig[frame:frame+1,:, anim_frame_start:anim_frame_end]
         title = 'ERD Sample '+str(frame)
-        filename='erdsample'+str(frame)
+        filename='erdsample28'+str(frame)+'.mp4'
         animation_plot([root, pred],interval=15.15, labels=['Root', 'Predicted'], title=title, filename=filename)
