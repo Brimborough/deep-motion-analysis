@@ -1,4 +1,11 @@
 import numpy as np
+<<<<<<< HEAD
+=======
+import os
+#os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2012/bin/x86_64-darwin'
+import matplotlib
+
+>>>>>>> 07cf7cd7e40e425d6fcc193687d205386faadce1
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation

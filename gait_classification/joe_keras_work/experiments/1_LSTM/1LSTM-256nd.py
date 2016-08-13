@@ -42,9 +42,8 @@ model.add(Activation(keras.layers.advanced_activations.ELU(alpha=1.0)))
 model.compile(loss='mean_squared_error', optimizer='nadam')
 
 print('Training model...')
-earlyStopping = keras.callbacks.EarlyStopping(patience=20)
-model.fit(train_x, train_y, batch_size=10, nb_epoch=200, validation_data=(test_x,test_y))
-
+history = model.fit(train_x, train_y, batch_size=10, nb_epoch=200, validation_data=(test_x,test_y))
+print(history.history['loss'])
 score = model.evaluate(test_x,test_y)
 print(score)
-model.save_weights('../../weights/1LSTM-256nd.hd5')
+#model.save_weights('../../weights/1LSTM-256nd.hd5')
