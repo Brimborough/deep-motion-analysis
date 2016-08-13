@@ -145,6 +145,8 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     orig = orig.swapaxes(2,1)
     print(data_x.shape)
     print(orig.shape)
+
+    np.savez_compressed("base", base=data_x)
     
     for frame in [1,2,5,8,10]:
         pred = data_x[frame:frame+1,:, anim_frame_start:anim_frame_end]

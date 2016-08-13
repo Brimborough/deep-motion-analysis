@@ -1,6 +1,13 @@
 import numpy as np
+import os
+#os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2012/bin/x86_64-darwin'
 import matplotlib
 matplotlib.use('TkAgg')
+#from matplotlib import rc
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+## for Palatino and other serif fonts use:
+#rc('font',**{'family':'serif','serif':['Palatino']})
+#rc('text', usetex=True)
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
@@ -9,12 +16,13 @@ from matplotlib.animation import ArtistAnimation
 
 from nn.Quaternions import Quaternions
 
-def animation_plot(animations, filename=None, ignore_root=False, interval=33.33, labels=[]):
+def animation_plot(animations, filename=None, ignore_root=False, interval=33.33, labels=[], title=None):
     
     for ai in range(len(animations)):
         anim = np.swapaxes(animations[ai][0].copy(), 0, 1)
         
         joints, root_x, root_z, root_r = anim[:,:-3], anim[:,-3], anim[:,-2], anim[:,-1]
+        print(joints.shape)
         joints = joints.reshape((len(joints), -1, 3))
         
         rotation = Quaternions.id(1)
@@ -71,12 +79,12 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
             changed += pnts
             
         return changed
-    plt.title('LSTM-256-Dropout-0.8')
+    plt.title(title)
     plt.tight_layout()
         
     ani = animation.FuncAnimation(fig, 
         animate, np.arange(len(animations[0])), interval=interval)
-    filename = "LSTM-256d.mp4"
+    #filename = "lstmc-512-10.mp4"
     if filename != None:
         ani.save(filename, fps=30, bitrate=13934)
         '''
@@ -87,7 +95,8 @@ def animation_plot(animations, filename=None, ignore_root=False, interval=33.33,
         np.savez_compressed(filename.replace('.mp4','.npz'), **data)
         '''
     try:
-        plt.show()
+        #plt.show()
+        print "Done " + title
     except AttributeError as e:
         pass
         
