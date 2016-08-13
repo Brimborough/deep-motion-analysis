@@ -31,7 +31,8 @@ data_std = data.std()
 data_mean = data.mean(axis=2).mean(axis=0)[np.newaxis, :, np.newaxis]
 
 data = (data - data_mean) / data_std
-
+print(train_control.shape)
+print(data.shape)
 train_x = data[:310, :-1]
 train_x = np.concatenate((train_x, train_control[:,:239]), axis=2)
 train_y = data[:310, 1:]

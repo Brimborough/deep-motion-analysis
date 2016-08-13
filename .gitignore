@@ -24,4 +24,4 @@ gait_classification/joe_keras_work/weights
 *.out
 *.h5
 *.eps
-
+*.mp4
