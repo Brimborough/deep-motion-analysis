@@ -21,7 +21,9 @@ sys.path.append('../../../representation_learning/')
 from nn.Network import InverseNetwork, AutoEncodingNetwork
 from nn.AnimationPlot import animation_plot
 
-
+control = np.load('../../../data/Joe/edin_shuffled_control.npz')['control']
+train_control = control[:310]
+test_control = control[310:]
 data = np.load('../../../data/Joe/edin_shuffled.npz')['clips']
 data = data[:,:,:-4]
 
@@ -31,9 +33,13 @@ data_mean = data.mean(axis=2).mean(axis=0)[np.newaxis, :, np.newaxis]
 data = (data - data_mean) / data_std
 
 train_x = data[:310, :-1]
+train_x = np.concatenate((train_x, train_control[:,:239]), axis=2)
 train_y = data[:310, 1:]
+train_y = np.concatenate((train_y, train_control[:,1:]), axis=2)
 test_x = data[310:,:-1]
+test_x = np.concatenate((test_x, test_control[:,:239]), axis=2)
 test_y = data[310:, 1:]
+test_y = np.concatenate((test_y, test_control[:,1:]), axis=2)
 
 
 # build the model: 2 stacked LSTM
@@ -66,9 +72,9 @@ nadam = Nadam(clipnorm=25)
 model.compile(loss=euclid_loss, optimizer=nadam)
 
 print('Training model...')
-model.fit(train_x, train_y, batch_size=25, nb_epoch=3800)
+model.fit(train_x, train_y, batch_size=25, nb_epoch=9000)
 
 score = model.evaluate(test_x,test_y)
 print(score)
-model.save_weights('../../weights/ERD-ns.hd5', overwrite=True)
+model.save_weights('../../weights/ERD-ns-con.hd5', overwrite=True)
 
