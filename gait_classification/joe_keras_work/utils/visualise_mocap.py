@@ -43,13 +43,13 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     if(test):
         data_x = data[310:, :-1]
         data_y = data[310:, 1:]
-        data_control = control_sig[310:,8::8]
+        data_control = control_sig[310:,:239]
         # If test data add 310 to the frame
         frame_orig = frame+test_start
     else:
         data_x = data[:310, :-1]
         data_y = data[:310, 1:]
-        data_control = control_sig[:310,8::8]
+        data_control = control_sig[:310,:239]
         frame_orig = frame
     
     data_x2 = data_x.copy()
@@ -65,6 +65,8 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
        orig = np.concatenate([data_x[:],data_y[:, -1:]], axis=1)
 
     if(control):
+        print(data_x.shape)
+        print(data_control.shape)
         data_x = np.concatenate((data_x, data_control[:,:]), axis=2)
   
     
@@ -78,7 +80,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         inner_loop_num = 240 - num_frame_pred
         preds = model.predict(data_loop) # Predict 29
         if (num_frame_pred != 1):
-            preds = preds[:, -num_frame_pred:(-num_frame_pred)+1].copy()
+            preds = preds[:, -num_frame_pred:(-num_frame_pred)+1,:66].copy()
             # Checks to ensure we aren't just copying data
             assert not (np.array_equal(preds, data_x[:, -num_frame_pred:(-num_frame_pred)+1]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:(-num_frame_pred)+1]))
@@ -89,7 +91,7 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
             else:
                 data_loop[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = preds.copy()
         else:
-            preds = preds[:, -num_frame_pred:].copy()
+            preds = preds[:, -num_frame_pred:,:66].copy()
             # Checks to ensure we aren't just copying data
             assert not (np.array_equal(preds, data_x[:, -num_frame_pred:]))
             assert not (np.array_equal(preds, data_loop[:, -num_frame_pred:]))
@@ -119,6 +121,8 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
         # TODO: Make control a LSTM to predict future 
         if(control):
             # Plus one since 29 is the length, not 30
+            print(preds.shape)
+            print(data_control.shape)
             data_x[:, (-num_frame_pred)+1:(-num_frame_pred)+2] = np.concatenate((preds.copy(),data_control[frame:frames, (-num_frame_pred):(-num_frame_pred)+1]), axis=2) 
         else:
             data_x = data_util(preds, data_loop, num_frame_pred).copy()
@@ -140,7 +144,6 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
 
     print(data_x.shape)
     print(orig.shape)
-    print('RMSE: '+str(rmse(data_x,orig)))
     #check = data_x[:,4:5]
     data_x = (data_x*data_std) + data_mean # Sort out the data again, uses final 30
     data_x = data_x.swapaxes(2, 1) # Swap back axes
@@ -148,13 +151,14 @@ def visualise(model, weight_file, frame=0 , num_frame_pred=1, anim_frame_start=0
     orig = orig.swapaxes(2,1)
     print(data_x.shape)
     print(orig.shape)
+    print('RMSE: '+str(rmse(data_x,orig)))
 
-    np.savez_compressed("base", base=data_x)
+    np.savez_compressed("base-con", base=data_x)
     
 
     for frame in [1,2,5,8,10]:
         pred = data_x[frame:frame+1,:, anim_frame_start:anim_frame_end]
         root = orig[frame:frame+1,:, anim_frame_start:anim_frame_end]
-        title = 'ERD Sample '+str(frame)
-        filename='erdsample28'+str(frame)+'.mp4'
+        title = 'ERD with Connection Sample '+str(frame)
+        filename='erdconsample28'+str(frame)+'.mp4'
         animation_plot([root, pred],interval=15.15, labels=['Root', 'Predicted'], title=title, filename=filename)
