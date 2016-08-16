@@ -22,7 +22,7 @@ from visualise_mocap import visualise
 print('Build model...')
 model = Sequential()
 #Potentially put LSTM here also, going over entire sequence controls....
-model.add(TimeDistributed(Dense(500),input_shape=(239,66)))
+model.add(TimeDistributed(Dense(500),input_shape=(239,69)))
 model.add(Activation('relu'))
 model.add(TimeDistributed(Dense(500)))
 model.add(LSTM(1000, return_sequences=True, consume_less='gpu', \
@@ -33,7 +33,7 @@ model.add(TimeDistributed(Dense(500)))
 model.add(Activation('relu'))
 model.add(TimeDistributed(Dense(500)))
 model.add(Activation('relu'))
-model.add(TimeDistributed(Dense(66)))
+model.add(TimeDistributed(Dense(69)))
 
 def euclid_loss(y_t, y):
 	scaling = 1
@@ -49,5 +49,5 @@ model.compile(loss=euclid_loss, optimizer=nadam)
 
 
 num_frame_pred = 28*8
-visualise(model, 'ERD-ns.hd5',orig_file="Joe/edin_shuffled.npz", num_frame_pred=num_frame_pred, num_pred_iter=1,\
-	 anim_frame_end=224, test_start=310, control=False)
+visualise(model, 'ERD-ns-con.hd5',orig_file="Joe/edin_shuffled.npz", num_frame_pred=num_frame_pred, num_pred_iter=0,\
+	 anim_frame_end=224, test_start=310, control=True)

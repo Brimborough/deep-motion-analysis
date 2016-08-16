@@ -11,6 +11,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.optimizers import Nadam
 import keras
 from keras.utils.data_utils import get_file
+from keras.callbacks import ModelCheckpoint
 import numpy as np
 import random
 import sys
@@ -72,8 +73,9 @@ def euclid_loss(y_t, y):
 nadam = Nadam(clipnorm=25)
 model.compile(loss=euclid_loss, optimizer=nadam)
 
+checkpointer = ModelCheckpoint(filepath="weights.hdf5", verbose=1, save_best_only=True)
 print('Training model...')
-model.fit(train_x, train_y, batch_size=25, nb_epoch=9000)
+model.fit(train_x, train_y, batch_size=25, nb_epoch=9000, callbacks=[checkpointer])
 
 score = model.evaluate(test_x,test_y)
 print(score)
