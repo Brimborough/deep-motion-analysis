@@ -1,5 +1,0 @@
-REMEMBER:
-
-1) Animation 1 by 1.
-2) Velocities needed to keep.
-3) Remove ground forces.
